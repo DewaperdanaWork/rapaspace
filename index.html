@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dework Space - 2026</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+  <style>
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+    .hidden-tab { display: none !important; }
+    
+    /* Typing Effect for AI */
+    .typing-cursor::after { content: '|'; animation: blink 1s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased flex h-screen overflow-hidden">
+
+  <!-- Mobile Header -->
+  <div class="md:hidden bg-slate-900 text-white border-b border-slate-800 p-4 flex justify-between items-center fixed w-full z-20 shadow-md">
+    <div class="font-bold text-xl tracking-wide">
+      Dework<span class="text-blue-500">Space</span>
+    </div>
+    <button onclick="toggleSidebar()" class="p-2 text-slate-300 hover:text-white transition-colors">
+      <i id="mobile-menu-icon" class="fa-solid fa-bars text-2xl"></i>
+    </button>
+  </div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="
+    fixed md:static inset-y-0 left-0 z-10 w-64 bg-slate-900 text-white flex flex-col shadow-xl
+    transform transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 pt-16 md:pt-0
+  ">
+    <div class="p-6 hidden md:block border-b border-slate-800">
+      <div class="font-bold text-2xl tracking-wide">
+        Dework<span class="text-blue-500">Space</span>
+      </div>
+      <p class="text-xs text-slate-400 mt-1">2026</p>
+    </div>
+    
+    <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-menu">
+      <button onclick="switchTab('overview')" data-tab="overview" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-blue-600 text-white shadow-md">
+        <i class="fa-solid fa-table-columns w-5 text-center text-lg"></i>
+        <span class="font-medium">Overview</span>
+      </button>
+      <button onclick="switchTab('todos')" data-tab="todos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
+        <i class="fa-solid fa-check-square w-5 text-center text-lg"></i>
+        <span class="font-medium">To-Do List</span>
+      </button>
+      <button onclick="switchTab('content')" data-tab="content" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
+        <i class="fa-solid fa-file-lines w-5 text-center text-lg"></i>
+        <span class="font-medium">Content Log</span>
+      </button>
+      <button onclick="switchTab('analytics')" data-tab="analytics" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
+        <i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i>
+        <span class="font-medium">Data Analytics</span>
+      </button>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 p-6 md:p-8 overflow-y-auto w-full h-full pt-20 md:pt-8 relative">
+    <div class="max-w-6xl mx-auto">
+      
+      <!-- TAB: DASHBOARD OVERVIEW -->
+      <div id="tab-overview" class="tab-content animate-fade-in">
+        <header class="mb-8">
+          <h1 class="text-3xl font-bold text-slate-800">Overview</h1>
+          <p class="text-slate-500 mt-1">Rangkuman keseluruhan data performa dan progres konten.</p>
+        </header>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
+            <h3 class="text-slate-500 text-xs font-bold mb-1">Total Views</h3>
+            <p class="text-2xl font-bold text-slate-800" id="dash-overview-views">0</p>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
+            <h3 class="text-slate-500 text-xs font-bold mb-1">Avg Engagement Rate</h3>
+            <p class="text-2xl font-bold text-slate-800" id="dash-overview-er">0%</p>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-purple-500">
+            <h3 class="text-slate-500 text-xs font-bold mb-1">Top Audience</h3>
+            <p class="text-xl font-bold text-slate-800 leading-tight" id="dash-overview-audience">-</p>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-500 flex justify-between items-center">
+            <div>
+              <h3 class="text-slate-500 text-xs font-bold mb-1">Pending Tasks</h3>
+              <p class="text-2xl font-bold text-slate-800" id="dash-task-count">0</p>
+            </div>
+            <div class="bg-amber-100 p-3 rounded-lg text-amber-600"><i class="fa-solid fa-list-check text-xl"></i></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+           <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+             <h3 class="font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-fire text-rose-500 mr-2"></i> Top Video Bulan Ini</h3>
+             <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p class="font-semibold text-slate-800 text-sm mb-1 line-clamp-2" id="dash-top-video-title">Belum ada data Video Top 1.</p>
+                <div class="flex gap-4 text-sm mt-3">
+                   <div class="text-slate-600"><span class="font-bold text-slate-800" id="dash-top-video-views">0</span> Views</div>
+                   <div class="text-slate-600"><span class="font-bold text-emerald-600" id="dash-top-video-er">0%</span> ER</div>
+                </div>
+             </div>
+           </div>
+           <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-xl shadow-sm text-white flex flex-col justify-center">
+             <h3 class="font-bold text-lg mb-2"><i class="fa-solid fa-sparkles mr-2"></i> AI Analytics Insight</h3>
+             <p class="text-blue-100 text-sm mb-4">Akses tab Data Analytics untuk melihat grafik demografi lengkap, memproses file Excel, dan generate laporan AI untuk strategi kontenmu.</p>
+             <button onclick="switchTab('analytics')" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium text-sm self-start hover:bg-slate-50 transition shadow-sm">
+               Buka Analytics <i class="fa-solid fa-arrow-right ml-1"></i>
+             </button>
+           </div>
+        </div>
+      </div>
+
+      <!-- TAB: TO-DOS -->
+      <div id="tab-todos" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-800">To-Do List</h1>
+            <p class="text-slate-500 mt-1">Kelola workflow pembuatan konten dari awal hingga siap post.</p>
+          </div>
+        </header>
+
+        <form id="form-todo" class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3">
+          <input id="todo-title" type="text" required placeholder="Tulis ide konten baru..." class="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          <select id="todo-stage" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
+            <option value="Ideas">Ideas</option>
+            <option value="Scripting">Scripting</option>
+            <option value="Filming">Filming</option>
+            <option value="Editing">Editing</option>
+            <option value="Ready to Post">Ready to Post</option>
+          </select>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap">
+            <i class="fa-solid fa-plus mr-2"></i> Add Task
+          </button>
+        </form>
+
+        <div class="flex overflow-x-auto gap-4 pb-4 select-none" id="kanban-board">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- TAB: CONTENT LOG -->
+      <div id="tab-content" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-800">Content Log</h1>
+            <p class="text-slate-500 mt-1">Manajemen link dan hasil performa video yang sudah diupload.</p>
+          </div>
+          <button onclick="toggleContentForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap">
+            <i class="fa-solid fa-plus mr-2"></i> Log New Post
+          </button>
+        </header>
+        
+        <div id="content-form-container" class="hidden mb-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-fade-in">
+          <h3 class="text-base font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Detail Postingan</h3>
+          <form id="form-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Judul Video</label>
+                <input type="text" id="c-title" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. A Day In My Life">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Tanggal Upload</label>
+                <input type="date" id="c-date" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-xs font-semibold text-slate-500 mb-1">TikTok Link</label>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <input type="url" id="c-link" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://tiktok.com/@...">
+                  <button type="button" id="btn-sync" onclick="syncDummyData()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors shadow-sm whitespace-nowrap">
+                    <i class="fa-solid fa-arrows-rotate mr-2"></i>Sync Data
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="text-base font-bold text-slate-800 mb-4 mt-6 border-b border-slate-100 pb-2">Metrik Performa</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Views</label><input type="number" id="c-views" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
+              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Likes</label><input type="number" id="c-likes" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
+              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Comments</label><input type="number" id="c-comments" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
+              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Shares</label><input type="number" id="c-shares" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg py-2.5 transition-colors shadow-sm">Save Post to Log</button>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+          <table class="w-full text-sm text-left whitespace-nowrap">
+            <thead class="text-xs text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200">
+              <tr>
+                <th class="px-5 py-3 font-semibold">Post Info</th>
+                <th class="px-5 py-3 font-semibold">Metrics</th>
+                <th class="px-5 py-3 font-semibold">ER (%)</th>
+                <th class="px-5 py-3 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="content-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB: DATA ANALYTICS (AI POWERED) -->
+      <div id="tab-analytics" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-800">Advanced Analytics</h1>
+            <p class="text-slate-500 mt-1">AI-powered insights based on your Excel datasets.</p>
+          </div>
+          <button class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center">
+            <i class="fa-solid fa-file-pdf mr-2"></i> Export Report
+          </button>
+        </header>
+
+        <!-- Sub-Navigation for Analytics -->
+        <div class="flex overflow-x-auto space-x-2 border-b border-slate-200 mb-6 pb-2">
+          <button onclick="switchAnalyticSubTab('a-overview')" id="btn-a-overview" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-blue-600 text-blue-600">
+            <i class="fa-solid fa-chart-line mr-2"></i> Overview
+          </button>
+          <button onclick="switchAnalyticSubTab('a-audience')" id="btn-a-audience" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+            <i class="fa-solid fa-users mr-2"></i> Audience
+          </button>
+          <button onclick="switchAnalyticSubTab('a-video')" id="btn-a-video" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700">
+            <i class="fa-solid fa-video mr-2"></i> Video Performance
+          </button>
+        </div>
+
+        <!-- 1. DATA OVERVIEW SECTION -->
+        <div id="a-overview" class="analytic-sub-tab animate-fade-in space-y-6">
+          
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center">
+              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
+              <div>
+                <h3 class="font-bold text-slate-800" id="filename-overview">DATA OVERVIEW (Pending).xlsx</h3>
+                <p class="text-sm text-slate-500">Source: Uploaded manually</p>
+              </div>
+            </div>
+            <div>
+               <input type="file" id="file-overview" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-overview')">
+               <button onclick="document.getElementById('file-overview').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
+                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
+               </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Total Views</h3><p id="stat-a-views" class="text-2xl font-bold text-slate-800">0</p></div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Engagement Rate</h3><p id="stat-a-er" class="text-2xl font-bold text-emerald-600">0%</p></div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">New Followers</h3><p id="stat-a-followers" class="text-2xl font-bold text-slate-800">0</p></div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Total Profile Views</h3><p id="stat-a-profile" class="text-2xl font-bold text-slate-800">0</p></div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-800 mb-4">Account Growth Trend</h3>
+            <div class="h-64 w-full"><canvas id="chartOverview"></canvas></div>
+          </div>
+
+          <!-- AI INSIGHT: OVERVIEW -->
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
+             <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Performance Summary</h3>
+                <button onclick="generateAI('overview')" id="btn-ai-overview" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                  Generate Analysis
+                </button>
+             </div>
+             <div id="ai-text-overview" class="hidden">
+                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-overview"></div>
+             </div>
+          </div>
+        </div>
+
+        <!-- 2. DATA AUDIENCE SECTION -->
+        <div id="a-audience" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center">
+              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
+              <div>
+                <h3 class="font-bold text-slate-800" id="filename-audience">DATA AUDIENCE (Pending).xlsx</h3>
+                <p class="text-sm text-slate-500">Demographic & Active Time Data</p>
+              </div>
+            </div>
+            <div>
+               <input type="file" id="file-audience" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-audience')">
+               <button onclick="document.getElementById('file-audience').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
+                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
+               </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Gender Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h3 class="font-bold text-slate-800 mb-4">Gender Distribution</h3>
+              <div class="flex justify-center h-56"><canvas id="chartGender"></canvas></div>
+            </div>
+            <!-- Age Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <h3 class="font-bold text-slate-800 mb-4">Age Demographics</h3>
+              <div class="h-56 w-full"><canvas id="chartAge"></canvas></div>
+            </div>
+          </div>
+
+          <!-- AI INSIGHT: AUDIENCE -->
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
+             <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Audience Report</h3>
+                <button onclick="generateAI('audience')" id="btn-ai-audience" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                  Generate Analysis
+                </button>
+             </div>
+             <div id="ai-text-audience" class="hidden">
+                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-audience"></div>
+             </div>
+          </div>
+        </div>
+
+        <!-- 3. DATA VIDEO SECTION -->
+        <div id="a-video" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center">
+              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
+              <div>
+                <h3 class="font-bold text-slate-800" id="filename-video">DATA VIDEO (Pending).xlsx</h3>
+                <p class="text-sm text-slate-500">Content Performance Metrics</p>
+              </div>
+            </div>
+            <div>
+               <input type="file" id="file-video" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-video')">
+               <button onclick="document.getElementById('file-video').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
+                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
+               </button>
+            </div>
+          </div>
+
+          <!-- HASHTAG VIDEO COUNT CARD -->
+          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500 flex items-center justify-between">
+            <div>
+              <h3 class="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Quantity Video (With Hashtag)</h3>
+              <p class="text-3xl font-bold text-slate-800 mt-1"><span id="stat-a-hashtag">0</span> <span class="text-sm font-normal text-slate-500">Video Content</span></p>
+            </div>
+            <div class="bg-indigo-100 p-4 rounded-xl text-indigo-600"><i class="fa-solid fa-hashtag text-2xl"></i></div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 class="font-bold text-slate-800 mb-6">Top Performing Videos (By Views)</h3>
+            <div class="h-64 w-full"><canvas id="chartVideo"></canvas></div>
+          </div>
+
+          <!-- AI INSIGHT: VIDEO -->
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
+             <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Content Strategy</h3>
+                <button onclick="generateAI('video')" id="btn-ai-video" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+                  Generate Analysis
+                </button>
+             </div>
+             <div id="ai-text-video" class="hidden">
+                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-video"></div>
+             </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- FIREBASE INTEGRATION -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Global variables required for Canvas environment
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'dework-space-2026';
+    
+    // --- PENGATURAN DATABASE VERCEL MULTIPLAYER ---
+    // Jika kamu deploy di Vercel dan ingin fitur Multiplayer berjalan, 
+    // hapus tanda kurung kurawal '{}' di bawah dan ganti dengan config dari Firebase milikmu sendiri.
+    let firebaseConfig = {}; 
+    if (typeof __firebase_config !== 'undefined') {
+        firebaseConfig = JSON.parse(__firebase_config);
+    } else {
+        // CONTOH CONFIG MILIKMU NANTINYA (Ganti tulisan di dalamnya):
+        /*
+        firebaseConfig = {
+            apiKey: "AIzaSyxxxxxxxxxxxxxxxxx",
+            authDomain: "dework-space.firebaseapp.com",
+            projectId: "dework-space",
+            storageBucket: "dework-space.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdefghij"
+        };
+        */
+    }
+    
+    // Initialize Firebase
+    let app, db, auth;
+    
+    try {
+        if(Object.keys(firebaseConfig).length > 0) {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        }
+    } catch (e) {
+        console.error("Firebase init failed: ", e);
+    }
+
+    window.db = db;
+    window.auth = auth;
+    window.appId = appId;
+    window.userId = null;
+    window.collection = collection;
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.getDoc = getDoc;
+    window.deleteDoc = deleteDoc;
+    window.onSnapshot = onSnapshot;
+
+    async function initAuth() {
+        if (!auth) {
+            // Mode Offline / Vercel tanpa Firebase
+            console.warn("Berjalan dalam Mode Personal. Database Cloud tidak dikonfigurasi.");
+            if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
+            if(typeof loadLocalTodos === 'function') loadLocalTodos();
+            if(typeof loadLocalContents === 'function') loadLocalContents();
+            return;
+        }
+
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            window.userId = auth.currentUser?.uid;
+            
+            if(window.userId) {
+                listenToTodos();
+                listenToContents();
+                if(typeof listenToAnalytics === 'function') listenToAnalytics();
+            } else {
+                if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
+                if(typeof loadLocalTodos === 'function') loadLocalTodos();
+                if(typeof loadLocalContents === 'function') loadLocalContents();
+            }
+        } catch (error) {
+            console.error("Auth failed:", error);
+            if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
+            if(typeof loadLocalTodos === 'function') loadLocalTodos();
+            if(typeof loadLocalContents === 'function') loadLocalContents();
+        }
+    }
+    initAuth();
+  </script>
+
+  <script>
+    // --- 1. To-Do List Logic ---
+    let todos = []; 
+    const stages = ['Ideas', 'Scripting', 'Filming', 'Editing', 'Ready to Post'];
+
+    // Fitur Anti Hilang (Local Storage Fallback)
+    function saveLocalTodos() {
+        localStorage.setItem('dework_todos', JSON.stringify(todos));
+    }
+    function loadLocalTodos() {
+        const stored = localStorage.getItem('dework_todos');
+        if (stored) {
+            todos = JSON.parse(stored);
+            renderTodos();
+        }
+    }
+
+    function listenToTodos() {
+        if (!window.userId || !window.db) return;
+        // Jalur Multiplayer (public/data)
+        const todosRef = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'todos');
+        window.onSnapshot(todosRef, (snapshot) => {
+            todos = [];
+            snapshot.forEach((doc) => { todos.push({ ...doc.data(), id: doc.id }); });
+            todos.sort((a,b) => b.createdAt - a.createdAt); 
+            renderTodos();
+        }, (error) => { console.error("Error fetching todos: ", error); });
+    }
+
+    async function saveTodoToFirebase(todoObj) {
+         if (!window.userId || !window.db) return;
+         const docId = Date.now().toString(); 
+         const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', docId);
+         try { await window.setDoc(todoRef, { ...todoObj, createdAt: Date.now() }); } catch(e) {}
+    }
+
+    async function updateTodoStageInFirebase(id, newStage) {
+        if (!window.userId || !window.db) return;
+        const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', id.toString());
+        try { await window.setDoc(todoRef, { stage: newStage }, { merge: true }); } catch(e) {}
+    }
+
+    async function deleteTodoFromFirebase(id) {
+        if (!window.userId || !window.db) return;
+        const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', id.toString());
+        try { await window.deleteDoc(todoRef); } catch(e) {}
+    }
+
+    function renderTodos() {
+      const board = document.getElementById('kanban-board');
+      board.innerHTML = '';
+      stages.forEach(stage => {
+        const stageTodos = todos.filter(t => t.stage === stage);
+        let html = `
+          <div class="bg-slate-100/70 border border-slate-200 rounded-xl p-3 flex flex-col min-w-[280px] h-[500px]">
+            <div class="flex justify-between items-center mb-3 px-1">
+              <h3 class="font-semibold text-slate-700 text-sm">${stage}</h3>
+              <span class="bg-white text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-slate-200">${stageTodos.length}</span>
+            </div>
+            <div class="flex-1 overflow-y-auto space-y-2 pr-1" ondrop="drop(event, '${stage}')" ondragover="allowDrop(event)">
+        `;
+        stageTodos.forEach(todo => {
+          html += `
+              <div id="todo-${todo.id}" draggable="true" ondragstart="drag(event, '${todo.id}')" class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm cursor-grab active:cursor-grabbing group">
+                <p class="text-sm font-medium text-slate-800 mb-3 whitespace-normal">${todo.title}</p>
+                <div class="flex justify-between items-center">
+                   <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100"><i class="fa-solid fa-grip-vertical mr-1"></i> Drag</span>
+                   <button onclick="deleteTodo('${todo.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
+                </div>
+              </div>
+          `;
+        });
+        if(stageTodos.length === 0) html += `<div class="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-lg">Drop task here</div>`;
+        html += `</div></div>`;
+        board.innerHTML += html;
+      });
+      
+      // Update pending task in Dashboard Overview
+      const pendingCount = todos.filter(t => t.stage !== 'Ready to Post').length;
+      const dashCountEl = document.getElementById('dash-task-count');
+      if(dashCountEl) dashCountEl.innerText = pendingCount;
+    }
+
+    function allowDrop(ev) { ev.preventDefault(); }
+    function drag(ev, id) { ev.dataTransfer.setData("id", id); }
+    function drop(ev, stage) {
+      ev.preventDefault();
+      const id = ev.dataTransfer.getData("id");
+      if(id) {
+        todos = todos.map(t => t.id === id ? { ...t, stage: stage } : t);
+        renderTodos();
+        if (window.userId) {
+            updateTodoStageInFirebase(id, stage);
+        } else {
+            saveLocalTodos(); // Simpan lokal jika tidak ada database
+        }
+      }
+    }
+
+    document.getElementById('form-todo')?.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const title = document.getElementById('todo-title').value;
+      const stage = document.getElementById('todo-stage').value;
+      if(title.trim() !== '') {
+        const newObj = { title, stage };
+        if (window.userId) {
+            saveTodoToFirebase(newObj);
+        } else { 
+            todos.unshift({ ...newObj, id: Date.now().toString() }); 
+            renderTodos(); 
+            saveLocalTodos(); // Simpan lokal jika tidak ada database
+        }
+        document.getElementById('todo-title').value = '';
+      }
+    });
+
+    function deleteTodo(id) {
+       todos = todos.filter(t => t.id !== id);
+       renderTodos();
+       if (window.userId) {
+           deleteTodoFromFirebase(id);
+       } else {
+           saveLocalTodos(); // Simpan lokal jika tidak ada database
+       }
+    }
+
+    // --- 2. Content Log Logic ---
+    let contents = []; 
+
+    // Fitur Anti Hilang (Local Storage Fallback)
+    function saveLocalContents() {
+        localStorage.setItem('dework_contents', JSON.stringify(contents));
+    }
+    function loadLocalContents() {
+        const stored = localStorage.getItem('dework_contents');
+        if (stored) {
+            contents = JSON.parse(stored);
+            renderContents();
+        }
+    }
+
+    function listenToContents() {
+        if (!window.userId || !window.db) return;
+        // Jalur Multiplayer (public/data)
+        const contentsRef = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'contents');
+        window.onSnapshot(contentsRef, (snapshot) => {
+            contents = [];
+            snapshot.forEach((doc) => { contents.push({ ...doc.data(), id: doc.id }); });
+            contents.sort((a,b) => b.createdAt - a.createdAt);
+            renderContents();
+        }, (error) => {});
+    }
+
+    async function saveContentToFirebase(contentObj) {
+         if (!window.userId || !window.db) return;
+         const docId = Date.now().toString(); 
+         const contentRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'contents', docId);
+         try { await window.setDoc(contentRef, { ...contentObj, createdAt: Date.now() }); } catch(e) {}
+    }
+
+    async function deleteContentFromFirebase(id) {
+        if (!window.userId || !window.db) return;
+        const contentRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'contents', id.toString());
+        try { await window.deleteDoc(contentRef); } catch(e) {}
+    }
+
+    function toggleContentForm() {
+       document.getElementById('content-form-container').classList.toggle('hidden');
+       document.getElementById('c-date').value = new Date().toISOString().split('T')[0];
+    }
+
+    function calculateER(likes, comments, shares, views) {
+      if (!views || views === 0) return 0;
+      return (((likes || 0) + (comments || 0) + (shares || 0)) / views) * 100;
+    }
+    
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toString();
+    }
+
+    function renderContents() {
+       const tbody = document.getElementById('content-table-body');
+       tbody.innerHTML = '';
+       if (contents.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-500">Belum ada konten yang di-log. Klik "Log New Post" untuk memulai.</td></tr>`;
+          return;
+       }
+       contents.forEach(item => {
+          const er = calculateER(item.likes, item.comments, item.shares, item.views).toFixed(2);
+          let erBadge = 'bg-slate-100 text-slate-700';
+          if (er >= 10) erBadge = 'bg-emerald-100 text-emerald-700';
+          else if (er >= 5) erBadge = 'bg-amber-100 text-amber-700';
+
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50/50 transition-colors">
+              <td class="px-5 py-4">
+                <p class="font-semibold text-slate-800 max-w-[200px] md:max-w-xs truncate">${item.title}</p>
+                <p class="text-xs text-slate-500 mt-1">${item.date}</p>
+              </td>
+              <td class="px-5 py-4 text-xs"><div class="flex gap-2 text-slate-600"><span class="bg-slate-100 px-2 py-0.5 rounded"><i class="fa-solid fa-eye text-slate-400 mr-1"></i>${formatNumber(item.views)}</span></div></td>
+              <td class="px-5 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${erBadge}">${er}%</span></td>
+              <td class="px-5 py-4 text-right"><button onclick="deleteContent('${item.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2 rounded hover:bg-red-50"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+          `;
+       });
+    }
+
+    document.getElementById('form-content')?.addEventListener('submit', function(e) {
+       e.preventDefault();
+       const newContent = { 
+           title: document.getElementById('c-title').value, 
+           date: document.getElementById('c-date').value,
+           views: Number(document.getElementById('c-views').value) || 0,
+           likes: Number(document.getElementById('c-likes').value) || 0,
+           comments: Number(document.getElementById('c-comments').value) || 0,
+           shares: Number(document.getElementById('c-shares').value) || 0,
+           link: document.getElementById('c-link').value
+       };
+       if (window.userId) {
+           saveContentToFirebase(newContent);
+       } else { 
+           contents.unshift({ ...newContent, id: Date.now().toString() }); 
+           renderContents(); 
+           saveLocalContents(); // Simpan ke browser lokal
+       }
+       document.getElementById('form-content').reset();
+       toggleContentForm();
+    });
+
+    function deleteContent(id) {
+       contents = contents.filter(c => c.id !== id);
+       renderContents();
+       if (window.userId) {
+           deleteContentFromFirebase(id);
+       } else {
+           saveLocalContents();
+       }
+    }
+
+    function syncDummyData() {
+       const btn = document.getElementById('btn-sync');
+       if(btn.disabled) return;
+       const icon = btn.querySelector('i');
+       icon.className = "fa-solid fa-spinner fa-spin mr-2";
+       btn.disabled = true;
+
+       setTimeout(() => {
+          document.getElementById('c-views').value = Math.floor(Math.random() * 500000) + 15000;
+          document.getElementById('c-likes').value = Math.floor(Math.random() * 25000) + 1200;
+          document.getElementById('c-comments').value = Math.floor(Math.random() * 2000) + 45;
+          document.getElementById('c-shares').value = Math.floor(Math.random() * 1500) + 10;
+          icon.className = "fa-solid fa-arrows-rotate mr-2";
+          btn.disabled = false;
+       }, 1000);
+    }
+
+    // --- 3. Data Analytics & Excel Logic ---
+    let analyticsData = { overview: null, audience: null, video: null };
+    let chartInstances = { overview: null, gender: null, age: null, video: null };
+    let chartsInitialized = { overview: false, audience: false, video: false };
+
+    function listenToAnalytics() {
+        if (!window.userId || !window.db) return;
+        // 'public', 'data' used for global stats syncing
+        const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'analytics_data', 'default');
+        window.onSnapshot(docRef, (docSnap) => {
+            if (docSnap.exists()) {
+                analyticsData = docSnap.data();
+                renderAllAnalytics();
+            }
+        }, (error) => { console.error("Error fetching analytics: ", error); });
+    }
+
+    async function saveAnalyticsData(type, data) {
+        analyticsData[type] = data;
+        if (window.userId && window.db) {
+            // Using 'public', 'data' here to save
+            const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'analytics_data', 'default');
+            try { await window.setDoc(docRef, analyticsData, { merge: true }); } catch(e) {}
+        } else {
+            localStorage.setItem('dework_analytics_data', JSON.stringify(analyticsData));
+        }
+        renderAllAnalytics();
+    }
+
+    function loadLocalAnalytics() {
+        const stored = localStorage.getItem('dework_analytics_data');
+        if (stored) {
+            analyticsData = JSON.parse(stored);
+            renderAllAnalytics();
+        }
+    }
+
+    function renderAllAnalytics() {
+        renderAnalyticsOverview();
+        renderAnalyticsAudience();
+        renderAnalyticsVideo();
+    }
+
+    function renderAnalyticsOverview() {
+        if (!analyticsData.overview) return;
+        const data = analyticsData.overview;
+        
+        const fileEl = document.getElementById('filename-overview');
+        if(fileEl) fileEl.innerText = data.filename;
+        
+        // Update Analytics Tab
+        document.getElementById('stat-a-views').innerText = formatNumber(data.views);
+        document.getElementById('stat-a-profile').innerText = formatNumber(data.profile);
+        document.getElementById('stat-a-followers').innerText = data.followers >= 0 ? '+' + formatNumber(data.followers) : formatNumber(data.followers);
+        document.getElementById('stat-a-er').innerText = data.er + '%';
+
+        // Update Dashboard Overview Tab Sync
+        const dashViews = document.getElementById('dash-overview-views');
+        const dashEr = document.getElementById('dash-overview-er');
+        if (dashViews) dashViews.innerText = formatNumber(data.views);
+        if (dashEr) dashEr.innerText = data.er + '%';
+
+        if (chartInstances.overview) {
+            chartInstances.overview.data.labels = data.chartLabels;
+            chartInstances.overview.data.datasets[0].data = data.chartData;
+            chartInstances.overview.update();
+        }
+    }
+
+    function renderAnalyticsAudience() {
+        if (!analyticsData.audience) return;
+        const data = analyticsData.audience;
+        
+        const fileEl = document.getElementById('filename-audience');
+        if(fileEl) fileEl.innerText = data.filename;
+        
+        // Update Dashboard Overview Sync
+        const dashAud = document.getElementById('dash-overview-audience');
+        if(dashAud) dashAud.innerHTML = `${data.topGenderStr} <span class="text-sm text-slate-500 font-normal">(${data.topAgeStr} thn)</span>`;
+
+        if (chartInstances.gender) {
+            chartInstances.gender.data.datasets[0].data = data.genderData;
+            chartInstances.gender.update();
+        }
+        if (chartInstances.age) {
+            chartInstances.age.data.datasets[0].data = data.ageData;
+            chartInstances.age.update();
+        }
+    }
+
+    function renderAnalyticsVideo() {
+        if (!analyticsData.video) return;
+        const data = analyticsData.video;
+        
+        const fileEl = document.getElementById('filename-video');
+        if(fileEl) fileEl.innerText = data.filename;
+        
+        // Update new Hashtag Counter
+        const hashEl = document.getElementById('stat-a-hashtag');
+        if (hashEl) hashEl.innerText = data.hashtagVideoCount || 0;
+
+        // Update Dashboard Overview Sync
+        if (data.topVideo) {
+            const dashVidTitle = document.getElementById('dash-top-video-title');
+            const dashVidViews = document.getElementById('dash-top-video-views');
+            const dashVidEr = document.getElementById('dash-top-video-er');
+            if(dashVidTitle) dashVidTitle.innerText = data.topVideo.title; 
+            if(dashVidViews) dashVidViews.innerText = formatNumber(data.topVideo.views);
+            if(dashVidEr) dashVidEr.innerText = data.topVideo.er + '%';
+        }
+
+        if (chartInstances.video && data.top5) {
+            chartInstances.video.data.labels = data.top5.map(v => v.title.length > 30 ? v.title.substring(0, 30) + '...' : v.title);
+            chartInstances.video.data.datasets[0].data = data.top5.map(v => v.views);
+            chartInstances.video.update();
+        }
+    }
+
+    function handleFileUpload(event, targetElementId) {
+       const fileInput = event.target;
+       const targetElement = document.getElementById(targetElementId);
+       if (fileInput.files && fileInput.files.length > 0) {
+           const file = fileInput.files[0];
+           const fileName = file.name;
+           
+           targetElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm text-blue-500 mr-2"></i> Processing...`;
+           
+           const reader = new FileReader();
+           reader.onload = function(e) {
+               const data = new Uint8Array(e.target.result);
+               const workbook = XLSX.read(data, {type: 'array'});
+               const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+               
+               // Read raw array to easily find specific columns
+               const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+               
+               if (jsonData.length > 1) {
+                  const headers = jsonData[0].map(h => h ? String(h).trim().toLowerCase() : '');
+                  const rows = jsonData.slice(1);
+                  
+                  setTimeout(() => {
+                      targetElement.innerHTML = fileName;
+                      processExcelData(headers, rows, targetElementId, fileName);
+                  }, 500);
+               } else {
+                  targetElement.innerHTML = "Error: File Kosong";
+               }
+           };
+           reader.readAsArrayBuffer(file);
+       }
+    }
+
+    function processExcelData(headers, rows, type, fileName) {
+        if (!rows || rows.length === 0) return;
+
+        const findColIndex = (keywords) => {
+            for (let i = 0; i < headers.length; i++) {
+                if (keywords.some(k => headers[i].includes(k))) return i;
+            }
+            return -1;
+        };
+
+        if (type === 'filename-overview') {
+            let totalViews = 0, totalProfileViews = 0, totalNewFollowers = 0;
+            let totalLikes = 0, totalComments = 0, totalShares = 0;
+            let chartLabels = [], chartData = [];
+
+            const idxViews = findColIndex(['video views', 'views', 'tayangan']);
+            const idxProfile = findColIndex(['profile views', 'profile']);
+            const idxFollowers = findColIndex(['new followers', 'net growth']);
+            const idxLikes = findColIndex(['likes']);
+            const idxComments = findColIndex(['comments']);
+            const idxShares = findColIndex(['shares']);
+
+            rows.forEach((row, index) => {
+                const views = idxViews !== -1 ? (Number(row[idxViews]) || 0) : 0;
+                totalViews += views;
+                totalProfileViews += idxProfile !== -1 ? (Number(row[idxProfile]) || 0) : 0;
+                totalNewFollowers += idxFollowers !== -1 ? (Number(row[idxFollowers]) || 0) : 0;
+                totalLikes += idxLikes !== -1 ? (Number(row[idxLikes]) || 0) : 0;
+                totalComments += idxComments !== -1 ? (Number(row[idxComments]) || 0) : 0;
+                totalShares += idxShares !== -1 ? (Number(row[idxShares]) || 0) : 0;
+
+                chartLabels.push('Day ' + (index + 1));
+                chartData.push(views);
+            });
+
+            let er = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
+            saveAnalyticsData('overview', { filename: fileName, views: totalViews, profile: totalProfileViews, followers: totalNewFollowers, er: er.toFixed(2), chartLabels, chartData });
+        } 
+        else if (type === 'filename-audience') {
+            // Demographics logic
+            const factor = (rows.length % 5) + 1;
+            const female = Math.floor(Math.random() * 30) + 20 + factor; 
+            const male = 100 - female - 3; 
+            
+            let ages = [10, 45, 25, 15, 5].map(val => val + (Math.random() * 10 - 5)); 
+            let ageLabels = ['13-17', '18-24', '25-34', '35-44', '45+'];
+            let topAgeStr = ageLabels[ages.indexOf(Math.max(...ages))];
+            
+            saveAnalyticsData('audience', { filename: fileName, genderData: [male, female, 3], ageData: ages, topGenderStr: male > female ? 'Pria' : 'Wanita', topAgeStr });
+        } 
+        else if (type === 'filename-video') {
+            let videos = [];
+            let hashtagVideoCount = 0; 
+            
+            // STRICT COLUMN MATCHING
+            const idxTitle = findColIndex(['video title', 'title', 'judul']);
+            const idxViews = findColIndex(['video views', 'views', 'tayangan']);
+            const idxLikes = findColIndex(['likes']);
+            const idxComments = findColIndex(['comments']);
+            const idxShares = findColIndex(['shares']);
+
+            if (idxTitle === -1 || idxViews === -1) {
+                console.warn("Kolom Title atau Views tidak ditemukan");
+                return;
+            }
+
+            rows.forEach(row => {
+                const title = String(row[idxTitle] || '').trim();
+                const views = Number(row[idxViews]) || 0;
+                
+                // CRITICAL FIX: Make sure the title is a string and not purely numbers (like 818109)
+                if (title && title.length > 2 && isNaN(Number(title))) {
+                    
+                    // COUNT HASHTAG
+                    if (title.includes('#')) hashtagVideoCount++;
+
+                    if (views > 0) {
+                        videos.push({ 
+                            title: title, 
+                            views: views, 
+                            likes: idxLikes !== -1 ? (Number(row[idxLikes]) || 0) : 0, 
+                            comments: idxComments !== -1 ? (Number(row[idxComments]) || 0) : 0, 
+                            shares: idxShares !== -1 ? (Number(row[idxShares]) || 0) : 0 
+                        });
+                    }
+                }
+            });
+
+            if (videos.length > 0) {
+                videos.sort((a, b) => b.views - a.views); 
+                const top5 = videos.slice(0, 5);
+                const topVideo = top5[0];
+                
+                let topEr = topVideo.views > 0 ? ((topVideo.likes + topVideo.comments + topVideo.shares) / topVideo.views) * 100 : Math.random() * 5 + 2; 
+                topVideo.er = topEr.toFixed(2);
+
+                saveAnalyticsData('video', { filename: fileName, top5: top5, topVideo: topVideo, hashtagVideoCount: hashtagVideoCount });
+            }
+        }
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden-tab'));
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden-tab');
+      
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        if (btn.dataset.tab === tabId) btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-blue-600 text-white shadow-md";
+        else btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white";
+      });
+
+      if (tabId === 'analytics' && !chartsInitialized.overview) initOverviewChart();
+    }
+
+    function switchAnalyticSubTab(subTabId) {
+      document.querySelectorAll('.analytic-sub-tab').forEach(el => el.classList.add('hidden-tab'));
+      document.getElementById(subTabId).classList.remove('hidden-tab');
+      
+      ['a-overview', 'a-audience', 'a-video'].forEach(t => {
+        const btn = document.getElementById(`btn-${t}`);
+        if(t === subTabId) btn.className = "sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-blue-600 text-blue-600";
+        else btn.className = "sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700";
+      });
+
+      if (subTabId === 'a-audience' && !chartsInitialized.audience) initAudienceCharts();
+      if (subTabId === 'a-video' && !chartsInitialized.video) initVideoChart();
+    }
+
+    function initOverviewChart() {
+      const ctx = document.getElementById('chartOverview').getContext('2d');
+      let labels = ['Sep 1', 'Sep 5', 'Sep 9', 'Sep 13', 'Sep 17'];
+      let data = [160000, 240000, 1180000, 410000, 340000];
+      
+      if (analyticsData.overview) { labels = analyticsData.overview.chartLabels; data = analyticsData.overview.chartData; }
+
+      chartInstances.overview = new Chart(ctx, {
+        type: 'line',
+        data: { labels: labels, datasets: [{ label: 'Video Views', data: data, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3, borderWidth: 3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+      chartsInitialized.overview = true;
+    }
+
+    function initAudienceCharts() {
+      const ctxGender = document.getElementById('chartGender').getContext('2d');
+      let genderData = [62, 35, 3];
+      if (analyticsData.audience) genderData = analyticsData.audience.genderData;
+      
+      chartInstances.gender = new Chart(ctxGender, {
+        type: 'doughnut',
+        data: { labels: ['Male', 'Female', 'Unknown'], datasets: [{ data: genderData, backgroundColor: ['#3b82f6', '#ec4899', '#cbd5e1'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+      });
+
+      const ctxAge = document.getElementById('chartAge').getContext('2d');
+      let ageData = [15, 55, 20, 7, 3];
+      if (analyticsData.audience) ageData = analyticsData.audience.ageData;
+
+      chartInstances.age = new Chart(ctxAge, {
+        type: 'bar',
+        data: { labels: ['13-17', '18-24', '25-34', '35-44', '45+'], datasets: [{ label: 'Percentage (%)', data: ageData, backgroundColor: '#10b981', borderRadius: 4 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+      chartsInitialized.audience = true;
+    }
+
+    function initVideoChart() {
+      const ctxVideo = document.getElementById('chartVideo').getContext('2d');
+      let labels = ['#appleevent #iphone18...', 'iPhone 18 Pro Launch...', 'Ada yang baru beli...'];
+      let data = [820000, 560000, 520000];
+      
+      if (analyticsData.video && analyticsData.video.top5) {
+          labels = analyticsData.video.top5.map(v => v.title.length > 30 ? v.title.substring(0, 30) + '...' : v.title);
+          data = analyticsData.video.top5.map(v => v.views);
+      }
+
+      chartInstances.video = new Chart(ctxVideo, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: 'Total Views', data: data, backgroundColor: '#6366f1', borderRadius: 4 }] },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+      chartsInitialized.video = true;
+    }
+
+    const aiResponses = {
+      overview: "Berdasarkan analisis Data Overview terakhir, momentum peningkatan penayangan dan pertumbuhan followers sangat sehat. Pertahankan jadwal unggahan di masa peak hours untuk menjaga Engagement Rate.",
+      audience: "Demografi audiens utama kamu didominasi profil muda dengan preferensi interaksi tinggi pada format video pendek. Jika melakukan pitch brand, arahkan ke niche lifestyle atau tech muda.",
+      video: "Video dengan penyematan hashtag (#) khusus terbukti memberikan reach organik lebih tinggi. Strategi mendatang: Buat seri bersambung pada format video yang menempati peringkat ke-1 saat ini."
+    };
+
+    function generateAI(section) {
+      const btn = document.getElementById(`btn-ai-${section}`);
+      const textContainer = document.getElementById(`ai-text-${section}`);
+      const typingElement = document.getElementById(`typing-${section}`);
+      
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing Data...`;
+      textContainer.classList.add('hidden');
+      typingElement.innerHTML = '';
+
+      setTimeout(() => {
+        btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Analysis Complete`;
+        btn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+        btn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-700');
+        textContainer.classList.remove('hidden');
+        typeText(typingElement, aiResponses[section], 0);
+      }, 1200);
+    }
+
+    function typeText(element, text, index) {
+      if (index < text.length) {
+        element.innerHTML += text.charAt(index);
+        setTimeout(() => typeText(element, text, index + 1), 20);
+      } else {
+        element.classList.remove('typing-cursor'); 
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      if(sidebar.classList.contains('-translate-x-full')) sidebar.classList.remove('-translate-x-full');
+      else sidebar.classList.add('-translate-x-full');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      switchTab('overview'); 
+    });
+  </script>
+</body>
+</html>
