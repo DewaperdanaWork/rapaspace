@@ -396,15 +396,27 @@
     if (typeof __firebase_config !== 'undefined') {
         firebaseConfig = JSON.parse(__firebase_config);
     } else {
-        // CONTOH CONFIG MILIKMU NANTINYA (Ganti tulisan di dalamnya):
-        /*
-        firebaseConfig = {
-            apiKey: "AIzaSyxxxxxxxxxxxxxxxxx",
-            authDomain: "dework-space.firebaseapp.com",
-            projectId: "dework-space",
-            storageBucket: "dework-space.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdefghij"
+       // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDEMiue__9AqQmejnIuGXnNkHd4oG9ePHs",
+  authDomain: "deworkspace-9bc49.firebaseapp.com",
+  projectId: "deworkspace-9bc49",
+  storageBucket: "deworkspace-9bc49.firebasestorage.app",
+  messagingSenderId: "592655966624",
+  appId: "1:592655966624:web:b39e4a5960e81d052104c5",
+  measurementId: "G-NHJXH9BVEW"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         };
         */
     }
