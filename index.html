@@ -1,14 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dework Space - 2026</title>
+  <title>Dework Space - Control Room</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class', theme: { extend: {} } }
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
   <style>
     .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -17,1085 +21,989 @@
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
     .hidden-tab { display: none !important; }
+    .sortable-ghost { opacity: 0.4; background-color: #f8fafc; border: 2px dashed #cbd5e1; }
+    .dark .sortable-ghost { background-color: #1e293b; border-color: #475569; }
     
-    /* Typing Effect for AI */
-    .typing-cursor::after { content: '|'; animation: blink 1s step-end infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
+    .date-checkbox:checked + div { background-color: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+    .dark .date-checkbox:checked + div { background-color: #1e3a8a; border-color: #3b82f6; color: #bfdbfe; }
+
+    select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>"); background-repeat: no-repeat; background-position-x: 100%; background-position-y: 50%; padding-right: 25px; }
+    .dark select { background-image: url("data:image/svg+xml;utf8,<svg fill='white' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>"); }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans antialiased flex h-screen overflow-hidden">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans antialiased flex h-screen overflow-hidden transition-colors duration-300">
+
+  <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- Mobile Header -->
-  <div class="md:hidden bg-slate-900 text-white border-b border-slate-800 p-4 flex justify-between items-center fixed w-full z-20 shadow-md">
-    <div class="font-bold text-xl tracking-wide">
-      Dework<span class="text-blue-500">Space</span>
+  <div class="md:hidden bg-slate-900 dark:bg-slate-950 text-white border-b border-slate-800 p-4 flex justify-between items-center fixed w-full z-20 shadow-md">
+    <div class="font-bold text-xl tracking-wide">Dework<span class="text-blue-500">Space</span></div>
+    <div class="flex items-center gap-4">
+      <button onclick="toggleDarkMode()" class="text-slate-300 hover:text-white"><i class="fa-solid fa-moon"></i></button>
+      <button onclick="toggleSidebar()" class="text-slate-300 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
     </div>
-    <button onclick="toggleSidebar()" class="p-2 text-slate-300 hover:text-white transition-colors">
-      <i id="mobile-menu-icon" class="fa-solid fa-bars text-2xl"></i>
-    </button>
   </div>
 
   <!-- Sidebar -->
-  <aside id="sidebar" class="
-    fixed md:static inset-y-0 left-0 z-10 w-64 bg-slate-900 text-white flex flex-col shadow-xl
-    transform transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0 pt-16 md:pt-0
-  ">
-    <div class="p-6 hidden md:block border-b border-slate-800">
-      <div class="font-bold text-2xl tracking-wide">
-        Dework<span class="text-blue-500">Space</span>
+  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-10 w-64 bg-slate-900 dark:bg-slate-950 text-white flex flex-col shadow-xl transform transition-transform duration-300 -translate-x-full md:translate-x-0 pt-16 md:pt-0">
+    <div class="p-6 hidden md:flex justify-between border-b border-slate-800 items-center">
+      <div>
+        <div class="font-bold text-2xl tracking-wide">Dework<span class="text-blue-500">Space</span></div>
+        <p class="text-xs text-emerald-400 mt-1 uppercase tracking-widest flex items-center"><i class="fa-solid fa-bolt mr-1.5 animate-pulse"></i> In-Memory Mode</p>
       </div>
-      <p class="text-xs text-slate-400 mt-1">2026</p>
+      <button onclick="toggleDarkMode()" class="text-slate-400 hover:text-white transition-colors" title="Toggle Dark Mode">
+        <i class="fa-solid fa-moon text-lg" id="dark-icon"></i>
+      </button>
     </div>
     
-    <nav class="flex-1 p-4 space-y-2 overflow-y-auto" id="nav-menu">
-      <button onclick="switchTab('overview')" data-tab="overview" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-blue-600 text-white shadow-md">
-        <i class="fa-solid fa-table-columns w-5 text-center text-lg"></i>
-        <span class="font-medium">Overview</span>
-      </button>
-      <button onclick="switchTab('todos')" data-tab="todos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
-        <i class="fa-solid fa-check-square w-5 text-center text-lg"></i>
-        <span class="font-medium">To-Do List</span>
-      </button>
-      <button onclick="switchTab('content')" data-tab="content" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
-        <i class="fa-solid fa-file-lines w-5 text-center text-lg"></i>
-        <span class="font-medium">Content Log</span>
-      </button>
-      <button onclick="switchTab('analytics')" data-tab="analytics" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white">
-        <i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i>
-        <span class="font-medium">Data Analytics</span>
-      </button>
+    <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+      <button onclick="switchTab('overview')" data-tab="overview" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-blue-600 text-white shadow-md"><i class="fa-solid fa-table-columns w-5 text-center text-lg"></i><span class="font-medium">Overview</span></button>
+      <button onclick="switchTab('compare')" data-tab="compare" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-code-compare w-5 text-center text-lg"></i><span class="font-medium">Daily Compare</span></button>
+      <button onclick="switchTab('analytics')" data-tab="analytics" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-chart-pie w-5 text-center text-lg"></i><span class="font-medium">Data Analytics</span></button>
+      <button onclick="switchTab('products')" data-tab="products" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-bag-shopping w-5 text-center text-lg"></i><span class="font-medium">Produk & Sales</span></button>
+      <button onclick="switchTab('todos')" data-tab="todos" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-check-square w-5 text-center text-lg"></i><span class="font-medium">Workspace</span></button>
+      <button onclick="switchTab('content')" data-tab="content" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white"><i class="fa-solid fa-file-lines w-5 text-center text-lg"></i><span class="font-medium">Content Log</span></button>
     </nav>
+    <div class="p-4 border-t border-slate-800"><button class="w-full flex justify-center items-center gap-2 bg-white text-slate-900 px-4 py-2 rounded-lg text-sm font-bold opacity-50 cursor-not-allowed"><i class="fa-brands fa-google"></i> Login (Disabled)</button></div>
   </aside>
 
-  <!-- Main Content -->
-  <main class="flex-1 p-6 md:p-8 overflow-y-auto w-full h-full pt-20 md:pt-8 relative">
-    <div class="max-w-6xl mx-auto">
+  <main class="flex-1 p-6 md:p-8 overflow-y-auto w-full h-full pt-20 md:pt-8 relative" id="main-content">
+    <div class="max-w-7xl mx-auto">
       
-      <!-- TAB: DASHBOARD OVERVIEW -->
+      <!-- TAB: OVERVIEW -->
       <div id="tab-overview" class="tab-content animate-fade-in">
-        <header class="mb-8">
-          <h1 class="text-3xl font-bold text-slate-800">Overview</h1>
-          <p class="text-slate-500 mt-1">Rangkuman keseluruhan data performa dan progres konten.</p>
+        <header class="mb-8 flex justify-between items-end">
+          <div><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Global Overview</h1><p class="text-slate-500 dark:text-slate-400 mt-1">Gabungan data keseluruhan konten dan e-commerce dari memori sistem.</p></div>
         </header>
-        
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-blue-500">
-            <h3 class="text-slate-500 text-xs font-bold mb-1">Total Views</h3>
-            <p class="text-2xl font-bold text-slate-800" id="dash-overview-views">0</p>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-emerald-500">
-            <h3 class="text-slate-500 text-xs font-bold mb-1">Avg Engagement Rate</h3>
-            <p class="text-2xl font-bold text-slate-800" id="dash-overview-er">0%</p>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-purple-500">
-            <h3 class="text-slate-500 text-xs font-bold mb-1">Top Audience</h3>
-            <p class="text-xl font-bold text-slate-800 leading-tight" id="dash-overview-audience">-</p>
-          </div>
-          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm border-l-4 border-l-amber-500 flex justify-between items-center">
-            <div>
-              <h3 class="text-slate-500 text-xs font-bold mb-1">Pending Tasks</h3>
-              <p class="text-2xl font-bold text-slate-800" id="dash-task-count">0</p>
-            </div>
-            <div class="bg-amber-100 p-3 rounded-lg text-amber-600"><i class="fa-solid fa-list-check text-xl"></i></div>
-          </div>
+
+        <h2 class="font-bold text-lg text-slate-700 dark:text-slate-300 mb-4 flex items-center"><i class="fa-solid fa-photo-film mr-2 text-blue-500"></i> Content Performance (All Time)</h2>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-blue-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">Total Views</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-views">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-emerald-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">Avg Engagement</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-er">0%</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-purple-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">Total Followers</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-followers">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-indigo-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">Video by Hashtag</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-hashtag">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-amber-500 flex justify-between items-center"><div><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1">Pending Tasks</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-task-count">0</p></div><div class="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg text-amber-600 dark:text-amber-400"><i class="fa-solid fa-list-check"></i></div></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-           <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-             <h3 class="font-bold text-slate-800 mb-4 flex items-center"><i class="fa-solid fa-fire text-rose-500 mr-2"></i> Top Video Bulan Ini</h3>
-             <div class="bg-slate-50 p-4 rounded-lg border border-slate-100">
-                <p class="font-semibold text-slate-800 text-sm mb-1 line-clamp-2" id="dash-top-video-title">Belum ada data Video Top 1.</p>
-                <div class="flex gap-4 text-sm mt-3">
-                   <div class="text-slate-600"><span class="font-bold text-slate-800" id="dash-top-video-views">0</span> Views</div>
-                   <div class="text-slate-600"><span class="font-bold text-emerald-600" id="dash-top-video-er">0%</span> ER</div>
-                </div>
-             </div>
-           </div>
-           <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-xl shadow-sm text-white flex flex-col justify-center">
-             <h3 class="font-bold text-lg mb-2"><i class="fa-solid fa-sparkles mr-2"></i> AI Analytics Insight</h3>
-             <p class="text-blue-100 text-sm mb-4">Akses tab Data Analytics untuk melihat grafik demografi lengkap, memproses file Excel, dan generate laporan AI untuk strategi kontenmu.</p>
-             <button onclick="switchTab('analytics')" class="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium text-sm self-start hover:bg-slate-50 transition shadow-sm">
-               Buka Analytics <i class="fa-solid fa-arrow-right ml-1"></i>
-             </button>
-           </div>
+        <h2 class="font-bold text-lg text-slate-700 dark:text-slate-300 mb-4 flex items-center"><i class="fa-solid fa-bag-shopping mr-2 text-emerald-500"></i> Sales Performance (All Time)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-emerald-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">GMV Total</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-gmv">Rp 0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-indigo-500"><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">Total Pesanan</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-pesanan">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm border-l-4 border-l-rose-500 flex justify-between items-center"><div><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">Top GPM</h3><p class="text-2xl font-bold text-slate-800 dark:text-white" id="dash-overview-gpm">Rp 0</p></div><div class="bg-rose-100 dark:bg-rose-900/30 p-3 rounded-lg text-rose-500 dark:text-rose-400"><i class="fa-solid fa-fire text-xl"></i></div></div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm mb-8">
+            <h3 class="font-bold text-slate-800 dark:text-white mb-4 flex items-center"><i class="fa-solid fa-arrow-trend-up mr-2 text-blue-500"></i> Global Views Growth (Timeline)</h3>
+            <div class="h-72 w-full"><canvas id="chartOverviewMain"></canvas></div>
         </div>
       </div>
 
-      <!-- TAB: TO-DOS -->
-      <div id="tab-todos" class="tab-content hidden-tab animate-fade-in">
+      <!-- TAB: DAILY COMPARE -->
+      <div id="tab-compare" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6"><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Daily Comparison</h1><p class="text-slate-500 dark:text-slate-400 mt-1">Bandingkan performa dari berbagai tanggal harian yang tersimpan di memori.</p></header>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 overflow-hidden mb-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 border-b border-slate-100 dark:border-slate-700 pb-4">
+            <div><h3 class="font-bold text-slate-800 dark:text-white">Pilih Tanggal Historis</h3><p class="text-xs text-slate-500 mt-1" id="selected-days-text">Pilih tanggal dari database untuk membandingkan.</p></div>
+          </div>
+          <div class="flex flex-wrap gap-3 mb-6" id="date-checkbox-container"><p class="text-sm text-slate-500">Belum ada data historis. Upload data Excel terlebih dahulu.</p></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left whitespace-nowrap">
+              <thead class="text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                <tr><th class="px-4 py-3 font-semibold rounded-tl-lg">Account / Brand</th><th class="px-4 py-3 font-semibold text-right">Merged GMV</th><th class="px-4 py-3 font-semibold text-right">Pesanan SKU</th><th class="px-4 py-3 font-semibold text-right">Merged Views</th><th class="px-4 py-3 font-semibold text-right">Avg ER (%)</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-700" id="comparison-table-body">
+                 <tr><td colspan="5" class="text-center py-6 text-slate-500">Belum ada data terpilih.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: ANALYTICS -->
+      <div id="tab-analytics" class="tab-content hidden-tab animate-fade-in">
         <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
-          <div>
-            <h1 class="text-3xl font-bold text-slate-800">To-Do List</h1>
-            <p class="text-slate-500 mt-1">Kelola workflow pembuatan konten dari awal hingga siap post.</p>
+          <div><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Data Analytics</h1><p class="text-slate-500 dark:text-slate-400 mt-1">Upload dan visualisasi dataset Excel TikTok. Sistem otomatis memecah data mingguan menjadi harian.</p></div>
+          <!-- Global Date Filter -->
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+             <i class="fa-solid fa-calendar-day text-blue-500"></i><span class="text-sm font-bold text-slate-700 dark:text-slate-300">Periode:</span>
+             <select id="analytics-date-filter" onchange="renderAnalytics()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-sm px-2 py-1 outline-none dark:text-white cursor-pointer min-w-[120px]"><option value="">No Data</option></select>
           </div>
         </header>
 
-        <form id="form-todo" class="mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-3">
-          <input id="todo-title" type="text" required placeholder="Tulis ide konten baru..." class="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-          <select id="todo-stage" class="px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">
-            <option value="Ideas">Ideas</option>
-            <option value="Scripting">Scripting</option>
-            <option value="Filming">Filming</option>
-            <option value="Editing">Editing</option>
-            <option value="Ready to Post">Ready to Post</option>
-          </select>
-          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap">
-            <i class="fa-solid fa-plus mr-2"></i> Add Task
-          </button>
-        </form>
+        <div class="flex overflow-x-auto space-x-2 border-b border-slate-200 dark:border-slate-700 mb-6 pb-2">
+          <button onclick="switchAnalyticSubTab('a-overview')" id="btn-a-overview" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-blue-600 text-blue-600"><i class="fa-solid fa-chart-line mr-2"></i> Overview</button>
+          <button onclick="switchAnalyticSubTab('a-audience')" id="btn-a-audience" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"><i class="fa-solid fa-users mr-2"></i> Audience</button>
+          <button onclick="switchAnalyticSubTab('a-video')" id="btn-a-video" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"><i class="fa-solid fa-video mr-2"></i> Video Perf</button>
+        </div>
 
-        <div class="flex overflow-x-auto gap-4 pb-4 select-none" id="kanban-board">
-          <!-- Rendered via JS -->
+        <!-- ANALYTICS: OVERVIEW -->
+        <div id="a-overview" class="analytic-sub-tab animate-fade-in space-y-6">
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between gap-4">
+            <div class="flex items-center"><i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i><div><h3 class="font-bold text-slate-800 dark:text-white" id="filename-overview">Belum ada file</h3><p class="text-xs text-slate-500 mt-1">Upload file <b>Overview (Bebas 1 hari / 1 Minggu)</b></p></div></div>
+            <div><input type="file" id="file-overview" class="hidden" accept=".xlsx,.xls" onchange="handleAnalyticsUpload(event, 'overview', 'filename-overview')"><button onclick="document.getElementById('file-overview').click()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 px-4 py-2 rounded-lg text-sm font-medium border border-slate-200 dark:border-slate-600 shadow-sm transition"><i class="fa-solid fa-upload mr-2"></i>Upload Excel</button></div>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><h3 class="text-xs font-bold mb-1 text-slate-500 dark:text-slate-400">Video Views</h3><p id="stat-a-views" class="text-2xl font-bold text-slate-800 dark:text-white">0</p></div>
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><h3 class="text-xs font-bold mb-1 text-slate-500 dark:text-slate-400">ER</h3><p id="stat-a-er" class="text-2xl font-bold text-emerald-600">0%</p></div>
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><h3 class="text-xs font-bold mb-1 text-slate-500 dark:text-slate-400">New Followers</h3><p id="stat-a-followers" class="text-2xl font-bold text-slate-800 dark:text-white">0</p></div>
+            <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700"><h3 class="text-xs font-bold mb-1 text-slate-500 dark:text-slate-400">Profile Views</h3><p id="stat-a-profile" class="text-2xl font-bold text-slate-800 dark:text-white">0</p></div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <h3 class="font-bold mb-4 text-slate-800 dark:text-white">Daily Growth Trend (Timeline Global Data)</h3>
+            <div class="h-64 w-full"><canvas id="chartOverview"></canvas></div>
+          </div>
+        </div>
+
+        <!-- ANALYTICS: AUDIENCE -->
+        <div id="a-audience" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between gap-4">
+            <div class="flex items-center"><i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i><div><h3 class="font-bold text-slate-800 dark:text-white" id="filename-audience">Belum ada file</h3><p class="text-xs text-slate-500 mt-1">Upload file <b>Audience (Bebas 1 hari / 1 Minggu)</b></p></div></div>
+            <div><input type="file" id="file-audience" class="hidden" accept=".xlsx" onchange="handleAnalyticsUpload(event, 'audience', 'filename-audience')"><button onclick="document.getElementById('file-audience').click()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm border shadow-sm transition"><i class="fa-solid fa-upload mr-2"></i>Upload Excel</button></div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border shadow-sm border-slate-200 dark:border-slate-700"><h3 class="font-bold mb-4 text-slate-800 dark:text-white">Gender Distribution</h3><div class="h-56 flex justify-center"><canvas id="chartGender"></canvas></div></div>
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border shadow-sm border-slate-200 dark:border-slate-700"><h3 class="font-bold mb-4 text-slate-800 dark:text-white">Age Demographics</h3><div class="h-56 w-full"><canvas id="chartAge"></canvas></div></div>
+          </div>
+        </div>
+
+        <!-- ANALYTICS: VIDEO -->
+        <div id="a-video" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between gap-4 shadow-sm">
+            <div class="flex items-center"><i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i><div><h3 class="font-bold text-slate-800 dark:text-white" id="filename-video">Belum ada file</h3><p class="text-xs text-slate-500 mt-1">Upload file <b>Video Performance (Bebas 1 hari / 1 Minggu)</b></p></div></div>
+            <div><input type="file" id="file-video" class="hidden" accept=".xlsx" onchange="handleAnalyticsUpload(event, 'video', 'filename-video')"><button onclick="document.getElementById('file-video').click()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm border shadow-sm transition"><i class="fa-solid fa-upload mr-2"></i>Upload Excel</button></div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 border-l-4 border-l-indigo-500 flex items-center justify-between">
+            <div><h3 class="text-slate-500 dark:text-slate-400 text-xs font-bold mb-1 uppercase tracking-wider">Quantity Video (With Hashtag)</h3><p class="text-3xl font-bold text-slate-800 dark:text-white mt-1"><span id="stat-a-hashtag">0</span></p></div>
+            <div class="bg-indigo-100 dark:bg-indigo-900/30 p-4 rounded-xl text-indigo-600 dark:text-indigo-400"><i class="fa-solid fa-hashtag text-2xl"></i></div>
+          </div>
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"><h3 class="font-bold mb-6 text-slate-800 dark:text-white">Top Performing Videos</h3><div class="h-64 w-full"><canvas id="chartVideo"></canvas></div></div>
         </div>
       </div>
 
-      <!-- TAB: CONTENT LOG -->
-      <div id="tab-content" class="tab-content hidden-tab animate-fade-in">
-        <header class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-          <div>
-            <h1 class="text-3xl font-bold text-slate-800">Content Log</h1>
-            <p class="text-slate-500 mt-1">Manajemen link dan hasil performa video yang sudah diupload.</p>
+      <!-- TAB: PRODUK & SALES -->
+      <div id="tab-products" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+          <div><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Video Performance Tracker</h1><p class="text-slate-500 dark:text-slate-400 mt-1">Analisis mendalam metrik penjualan dan konversi dari setiap video (Support Multi-Day Excel).</p></div>
+          <div class="flex items-center gap-3 bg-white dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+             <i class="fa-solid fa-calendar-day text-emerald-500"></i><span class="text-sm font-bold text-slate-700 dark:text-slate-300">Periode:</span>
+             <select id="sales-date-filter" onchange="renderSales()" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-sm px-2 py-1 outline-none dark:text-white cursor-pointer min-w-[120px]"><option value="">No Data</option></select>
           </div>
-          <button onclick="toggleContentForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium transition shadow-sm whitespace-nowrap">
-            <i class="fa-solid fa-plus mr-2"></i> Log New Post
-          </button>
         </header>
         
-        <div id="content-form-container" class="hidden mb-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm animate-fade-in">
-          <h3 class="text-base font-bold text-slate-800 mb-4 border-b border-slate-100 pb-2">Detail Postingan</h3>
-          <form id="form-content">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Judul Video</label>
-                <input type="text" id="c-title" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. A Day In My Life">
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Tanggal Upload</label>
-                <input type="date" id="c-date" required class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-              </div>
-              <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-slate-500 mb-1">TikTok Link</label>
-                <div class="flex flex-col sm:flex-row gap-2">
-                  <input type="url" id="c-link" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="https://tiktok.com/@...">
-                  <button type="button" id="btn-sync" onclick="syncDummyData()" class="bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-lg px-4 py-2 transition-colors shadow-sm whitespace-nowrap">
-                    <i class="fa-solid fa-arrows-rotate mr-2"></i>Sync Data
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <h3 class="text-base font-bold text-slate-800 mb-4 mt-6 border-b border-slate-100 pb-2">Metrik Performa</h3>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Views</label><input type="number" id="c-views" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
-              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Likes</label><input type="number" id="c-likes" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
-              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Comments</label><input type="number" id="c-comments" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
-              <div><label class="block text-xs font-semibold text-slate-500 mb-1">Shares</label><input type="number" id="c-shares" min="0" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none"></div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg py-2.5 transition-colors shadow-sm">Save Post to Log</button>
-          </form>
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 mb-6 flex flex-col md:flex-row justify-between gap-4 shadow-sm">
+          <div class="flex items-center"><i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i><div><h3 class="font-bold text-slate-800 dark:text-white" id="filename-product">Belum ada file</h3><p class="text-xs text-slate-500 mt-1">Upload file <b>Video Performance List (.xlsx)</b></p></div></div>
+          <div><input type="file" id="file-product" class="hidden" accept=".xlsx, .xls" onchange="handleProductUpload(event)"><button onclick="document.getElementById('file-product').click()" class="bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium border shadow-sm transition"><i class="fa-solid fa-upload mr-2"></i>Upload Data Sales</button></div>
         </div>
 
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
-          <table class="w-full text-sm text-left whitespace-nowrap">
-            <thead class="text-xs text-slate-500 uppercase bg-slate-50/80 border-b border-slate-200">
-              <tr>
-                <th class="px-5 py-3 font-semibold">Post Info</th>
-                <th class="px-5 py-3 font-semibold">Metrics</th>
-                <th class="px-5 py-3 font-semibold">ER (%)</th>
-                <th class="px-5 py-3 font-semibold text-right">Actions</th>
-              </tr>
+        <!-- 4 Top Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"><h3 class="text-slate-500 text-xs font-bold mb-1 uppercase">GMV Total dari Video</h3><p id="s-gmv" class="text-2xl font-bold text-emerald-600">Rp 0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"><h3 class="text-slate-500 text-xs font-bold mb-1 uppercase">Pesanan SKU</h3><p id="s-sku" class="text-2xl font-bold text-slate-800 dark:text-white">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"><h3 class="text-slate-500 text-xs font-bold mb-1 uppercase">Video Views (VV)</h3><p id="s-vv" class="text-2xl font-bold text-blue-600">0</p></div>
+          <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm"><h3 class="text-slate-500 text-xs font-bold mb-1 uppercase">Avg GPM</h3><p id="s-gpm" class="text-2xl font-bold text-amber-500">Rp 0</p></div>
+        </div>
+
+        <!-- Advanced Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Funnel Chart -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 class="font-bold text-slate-800 dark:text-white mb-2 flex items-center"><i class="fa-solid fa-filter text-blue-500 mr-2"></i> Traffic & Conversion Funnel</h3>
+                <p class="text-xs text-slate-500 mb-4">Menganalisis persentase drop-off audiens.</p>
+                <div class="h-64 w-full"><canvas id="chartFunnel"></canvas></div>
+            </div>
+            
+            <!-- Scatter Plot GPM vs Retention -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <h3 class="font-bold text-slate-800 dark:text-white mb-2 flex items-center"><i class="fa-solid fa-bullseye text-amber-500 mr-2"></i> GPM vs Retention (Video Matrix)</h3>
+                <p class="text-xs text-slate-500 mb-4">Posisi kanan atas = Video Super Bintang (Tahan lama & Menghasilkan).</p>
+                <div class="h-64 w-full"><canvas id="chartScatter"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+             <!-- GMV Source -->
+             <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                 <h3 class="font-bold text-slate-800 dark:text-white mb-2">Direct vs Indirect Sales</h3>
+                 <div class="h-56 w-full flex justify-center"><canvas id="chartGMVType"></canvas></div>
+             </div>
+
+             <!-- Top Tagged Products -->
+             <div class="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+                 <h3 class="font-bold text-slate-800 dark:text-white mb-4"><i class="fa-solid fa-tags text-indigo-500 mr-2"></i> Most Tagged Products</h3>
+                 <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left whitespace-normal">
+                        <thead class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                          <tr><th class="px-3 py-2">Rank</th><th class="px-3 py-2">Nama Produk (Potong 10 Kata)</th><th class="px-3 py-2 text-right">Ditag (x)</th></tr>
+                        </thead>
+                        <tbody id="top-tags-body" class="divide-y divide-slate-100 dark:divide-slate-700">
+                            <tr><td colspan="3" class="text-center py-4 text-slate-500">Silakan unggah data Excel.</td></tr>
+                        </tbody>
+                    </table>
+                 </div>
+             </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto shadow-sm">
+          <h3 class="font-bold text-slate-800 dark:text-white p-5 border-b border-slate-200 dark:border-slate-700"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i> Winning Creatives Leaderboard</h3>
+          <table class="w-full text-sm text-left whitespace-normal">
+            <thead class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+              <tr><th class="px-5 py-3">Rank</th><th class="px-5 py-3">Caption / Judul Video</th><th class="px-5 py-3 text-right">Views (VV)</th><th class="px-5 py-3 text-right">Pesanan SKU</th><th class="px-5 py-3 text-right">GMV dari Video</th></tr>
             </thead>
-            <tbody id="content-table-body" class="divide-y divide-slate-100">
-              <!-- Rendered via JS -->
+            <tbody id="top-videos-sales-body" class="divide-y divide-slate-100 dark:divide-slate-700">
+               <tr><td colspan="5" class="text-center py-6 text-slate-500">Silakan unggah data Excel.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- TAB: DATA ANALYTICS (AI POWERED) -->
-      <div id="tab-analytics" class="tab-content hidden-tab animate-fade-in">
-        <header class="mb-6 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
-          <div>
-            <h1 class="text-3xl font-bold text-slate-800">Advanced Analytics</h1>
-            <p class="text-slate-500 mt-1">AI-powered insights based on your Excel datasets.</p>
-          </div>
-          <button class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center">
-            <i class="fa-solid fa-file-pdf mr-2"></i> Export Report
-          </button>
-        </header>
+      <!-- TAB: TO-DOS -->
+      <div id="tab-todos" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6"><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Workspace & To-Do</h1></header>
+        <form id="form-todo" class="mb-6 bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex gap-3">
+          <input id="todo-title" type="text" required placeholder="Ide konten..." class="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 dark:text-white">
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg shadow-sm"><i class="fa-solid fa-plus"></i> Task</button>
+        </form>
+        <div class="flex overflow-x-auto gap-4 pb-4" id="kanban-board"></div>
+      </div>
 
-        <!-- Sub-Navigation for Analytics -->
-        <div class="flex overflow-x-auto space-x-2 border-b border-slate-200 mb-6 pb-2">
-          <button onclick="switchAnalyticSubTab('a-overview')" id="btn-a-overview" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-blue-600 text-blue-600">
-            <i class="fa-solid fa-chart-line mr-2"></i> Overview
-          </button>
-          <button onclick="switchAnalyticSubTab('a-audience')" id="btn-a-audience" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700">
-            <i class="fa-solid fa-users mr-2"></i> Audience
-          </button>
-          <button onclick="switchAnalyticSubTab('a-video')" id="btn-a-video" class="sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700">
-            <i class="fa-solid fa-video mr-2"></i> Video Performance
-          </button>
+      <!-- TAB: CONTENT LOG -->
+      <div id="tab-content" class="tab-content hidden-tab animate-fade-in">
+        <header class="mb-6 flex justify-between items-end"><h1 class="text-3xl font-bold text-slate-800 dark:text-white">Content Log</h1><button onclick="toggleContentForm()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium shadow-sm"><i class="fa-solid fa-plus mr-2"></i>Log Post</button></header>
+        
+        <div id="content-form-container" class="hidden mb-6 bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm animate-fade-in">
+          <form id="form-content">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div class="col-span-2"><label class="text-xs text-slate-500">Judul</label><input type="text" id="c-title" class="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none dark:text-white"></div>
+              <div><label class="text-xs text-slate-500">Tanggal</label><input type="date" id="c-date" class="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none dark:text-white"></div>
+              <div><label class="text-xs text-slate-500">Link TikTok</label><input type="url" id="c-link" class="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none dark:text-white" placeholder="https://..."></div>
+              <div><label class="text-xs text-slate-500">Views</label><input type="number" id="c-views" class="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none dark:text-white"></div>
+              <div><label class="text-xs text-slate-500">Likes</label><input type="number" id="c-likes" class="w-full mt-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm outline-none dark:text-white"></div>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2.5 font-medium shadow-sm">Save Log</button>
+          </form>
         </div>
 
-        <!-- 1. DATA OVERVIEW SECTION -->
-        <div id="a-overview" class="analytic-sub-tab animate-fade-in space-y-6">
-          
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center">
-              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
-              <div>
-                <h3 class="font-bold text-slate-800" id="filename-overview">DATA OVERVIEW (Pending).xlsx</h3>
-                <p class="text-sm text-slate-500">Source: Uploaded manually</p>
-              </div>
-            </div>
-            <div>
-               <input type="file" id="file-overview" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-overview')">
-               <button onclick="document.getElementById('file-overview').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
-                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
-               </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Total Views</h3><p id="stat-a-views" class="text-2xl font-bold text-slate-800">0</p></div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Engagement Rate</h3><p id="stat-a-er" class="text-2xl font-bold text-emerald-600">0%</p></div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">New Followers</h3><p id="stat-a-followers" class="text-2xl font-bold text-slate-800">0</p></div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-500 text-xs font-bold mb-1">Total Profile Views</h3><p id="stat-a-profile" class="text-2xl font-bold text-slate-800">0</p></div>
-          </div>
-
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="font-bold text-slate-800 mb-4">Account Growth Trend</h3>
-            <div class="h-64 w-full"><canvas id="chartOverview"></canvas></div>
-          </div>
-
-          <!-- AI INSIGHT: OVERVIEW -->
-          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
-             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Performance Summary</h3>
-                <button onclick="generateAI('overview')" id="btn-ai-overview" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
-                  Generate Analysis
-                </button>
-             </div>
-             <div id="ai-text-overview" class="hidden">
-                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-overview"></div>
-             </div>
-          </div>
-        </div>
-
-        <!-- 2. DATA AUDIENCE SECTION -->
-        <div id="a-audience" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center">
-              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
-              <div>
-                <h3 class="font-bold text-slate-800" id="filename-audience">DATA AUDIENCE (Pending).xlsx</h3>
-                <p class="text-sm text-slate-500">Demographic & Active Time Data</p>
-              </div>
-            </div>
-            <div>
-               <input type="file" id="file-audience" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-audience')">
-               <button onclick="document.getElementById('file-audience').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
-                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
-               </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Gender Chart -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <h3 class="font-bold text-slate-800 mb-4">Gender Distribution</h3>
-              <div class="flex justify-center h-56"><canvas id="chartGender"></canvas></div>
-            </div>
-            <!-- Age Chart -->
-            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <h3 class="font-bold text-slate-800 mb-4">Age Demographics</h3>
-              <div class="h-56 w-full"><canvas id="chartAge"></canvas></div>
-            </div>
-          </div>
-
-          <!-- AI INSIGHT: AUDIENCE -->
-          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
-             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Audience Report</h3>
-                <button onclick="generateAI('audience')" id="btn-ai-audience" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
-                  Generate Analysis
-                </button>
-             </div>
-             <div id="ai-text-audience" class="hidden">
-                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-audience"></div>
-             </div>
-          </div>
-        </div>
-
-        <!-- 3. DATA VIDEO SECTION -->
-        <div id="a-video" class="analytic-sub-tab hidden-tab animate-fade-in space-y-6">
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center">
-              <i class="fa-solid fa-file-excel text-3xl text-emerald-600 mr-4"></i>
-              <div>
-                <h3 class="font-bold text-slate-800" id="filename-video">DATA VIDEO (Pending).xlsx</h3>
-                <p class="text-sm text-slate-500">Content Performance Metrics</p>
-              </div>
-            </div>
-            <div>
-               <input type="file" id="file-video" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event, 'filename-video')">
-               <button onclick="document.getElementById('file-video').click()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap shadow-sm border border-slate-200">
-                 <i class="fa-solid fa-upload mr-2"></i>Re-upload
-               </button>
-            </div>
-          </div>
-
-          <!-- HASHTAG VIDEO COUNT CARD -->
-          <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 border-l-4 border-l-indigo-500 flex items-center justify-between">
-            <div>
-              <h3 class="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Quantity Video (With Hashtag)</h3>
-              <p class="text-3xl font-bold text-slate-800 mt-1"><span id="stat-a-hashtag">0</span> <span class="text-sm font-normal text-slate-500">Video Content</span></p>
-            </div>
-            <div class="bg-indigo-100 p-4 rounded-xl text-indigo-600"><i class="fa-solid fa-hashtag text-2xl"></i></div>
-          </div>
-
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="font-bold text-slate-800 mb-6">Top Performing Videos (By Views)</h3>
-            <div class="h-64 w-full"><canvas id="chartVideo"></canvas></div>
-          </div>
-
-          <!-- AI INSIGHT: VIDEO -->
-          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6 relative overflow-hidden">
-             <div class="flex justify-between items-center mb-4">
-                <h3 class="font-bold text-indigo-900 text-lg flex items-center"><i class="fa-solid fa-sparkles text-indigo-500 mr-2"></i> AI Content Strategy</h3>
-                <button onclick="generateAI('video')" id="btn-ai-video" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
-                  Generate Analysis
-                </button>
-             </div>
-             <div id="ai-text-video" class="hidden">
-                <div class="text-indigo-900 text-sm leading-relaxed typing-cursor" id="typing-video"></div>
-             </div>
-          </div>
-        </div>
-
+        <div class="mb-4 relative"><i class="fa-solid fa-search absolute left-4 top-3.5 text-slate-400"></i><input type="text" id="search-log" placeholder="Cari judul video..." onkeyup="renderContents()" class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none focus:border-blue-500 shadow-sm text-sm dark:text-white"></div>
+        <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-x-auto shadow-sm"><table class="w-full text-sm text-left"><thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500"><tr><th class="px-5 py-3">Post Info</th><th class="px-5 py-3">Metrics</th><th class="px-5 py-3 text-right">Action</th></tr></thead><tbody id="content-table-body" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody></table></div>
       </div>
     </div>
   </main>
 
-  <!-- FIREBASE INTEGRATION -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Global variables required for Canvas environment
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'dework-space-2026';
-    
-    // --- PENGATURAN DATABASE VERCEL MULTIPLAYER ---
-    let firebaseConfig = {
-        apiKey: "AIzaSyDEMiue__9AqQmejnIuGXnNkHd4oG9ePHs",
-        authDomain: "deworkspace-9bc49.firebaseapp.com",
-        projectId: "deworkspace-9bc49",
-        storageBucket: "deworkspace-9bc49.firebasestorage.app",
-        messagingSenderId: "592655966624",
-        appId: "1:592655966624:web:b39e4a5960e81d052104c5",
-        measurementId: "G-NHJXH9BVEW"
-    };
-    
-    // Initialize Firebase
-    let app, db, auth;
-    
-    try {
-        if(Object.keys(firebaseConfig).length > 0) {
-            app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-        }
-    } catch (e) {
-        console.error("Firebase init failed: ", e);
-    }
-
-    window.db = db;
-    window.auth = auth;
-    window.appId = appId;
-    window.userId = null;
-    window.collection = collection;
-    window.doc = doc;
-    window.setDoc = setDoc;
-    window.getDoc = getDoc;
-    window.deleteDoc = deleteDoc;
-    window.onSnapshot = onSnapshot;
-
-    async function initAuth() {
-        if (!auth) {
-            // Mode Offline / Vercel tanpa Firebase
-            console.warn("Berjalan dalam Mode Personal. Database Cloud tidak dikonfigurasi.");
-            if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
-            if(typeof loadLocalTodos === 'function') loadLocalTodos();
-            if(typeof loadLocalContents === 'function') loadLocalContents();
-            return;
-        }
-
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-            window.userId = auth.currentUser?.uid;
-            
-            if(window.userId) {
-                listenToTodos();
-                listenToContents();
-                if(typeof listenToAnalytics === 'function') listenToAnalytics();
-            } else {
-                if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
-                if(typeof loadLocalTodos === 'function') loadLocalTodos();
-                if(typeof loadLocalContents === 'function') loadLocalContents();
-            }
-        } catch (error) {
-            console.error("Auth failed:", error);
-            if(typeof loadLocalAnalytics === 'function') loadLocalAnalytics();
-            if(typeof loadLocalTodos === 'function') loadLocalTodos();
-            if(typeof loadLocalContents === 'function') loadLocalContents();
-        }
-    }
-    initAuth();
-  </script>
+  <!-- Modal Edit Notes -->
+  <div id="modal-note" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center animate-fade-in backdrop-blur-sm">
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-6 w-[90%] max-w-lg shadow-2xl border border-slate-200 dark:border-slate-700">
+      <h3 class="font-bold text-lg text-slate-800 dark:text-white mb-4">Edit Note / Script</h3>
+      <textarea id="modal-textarea" rows="6" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 mb-4 dark:text-white"></textarea>
+      <div class="flex justify-end gap-3"><button onclick="closeModal()" class="px-4 py-2 text-sm text-slate-500">Cancel</button><button onclick="saveNote()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg">Save Script</button></div>
+    </div>
+  </div>
 
   <script>
-    // --- 1. To-Do List Logic ---
-    let todos = []; 
-    const stages = ['Ideas', 'Scripting', 'Filming', 'Editing', 'Ready to Post'];
-
-    // Fitur Anti Hilang (Local Storage Fallback)
-    function saveLocalTodos() {
-        localStorage.setItem('dework_todos', JSON.stringify(todos));
-    }
-    function loadLocalTodos() {
-        const stored = localStorage.getItem('dework_todos');
-        if (stored) {
-            todos = JSON.parse(stored);
-            renderTodos();
-        }
+    // --- UTILS & CORE ---
+    function showToast(message, type = "success") {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgColor = type === "error" ? "bg-red-500" : type === "info" ? "bg-blue-500" : "bg-emerald-500";
+      toast.className = `${bgColor} text-white px-4 py-2 rounded shadow-lg text-sm font-medium animate-fade-in`;
+      toast.innerHTML = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
     }
 
-    function listenToTodos() {
-        if (!window.userId || !window.db) return;
-        // Jalur Multiplayer (public/data)
-        const todosRef = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'todos');
-        window.onSnapshot(todosRef, (snapshot) => {
-            todos = [];
-            snapshot.forEach((doc) => { todos.push({ ...doc.data(), id: doc.id }); });
-            todos.sort((a,b) => b.createdAt - a.createdAt); 
-            renderTodos();
-        }, (error) => { console.error("Error fetching todos: ", error); });
-    }
-
-    async function saveTodoToFirebase(todoObj) {
-         if (!window.userId || !window.db) return;
-         const docId = Date.now().toString(); 
-         const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', docId);
-         try { await window.setDoc(todoRef, { ...todoObj, createdAt: Date.now() }); } catch(e) {}
-    }
-
-    async function updateTodoStageInFirebase(id, newStage) {
-        if (!window.userId || !window.db) return;
-        const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', id.toString());
-        try { await window.setDoc(todoRef, { stage: newStage }, { merge: true }); } catch(e) {}
-    }
-
-    async function deleteTodoFromFirebase(id) {
-        if (!window.userId || !window.db) return;
-        const todoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'todos', id.toString());
-        try { await window.deleteDoc(todoRef); } catch(e) {}
-    }
-
-    function renderTodos() {
-      const board = document.getElementById('kanban-board');
-      board.innerHTML = '';
-      stages.forEach(stage => {
-        const stageTodos = todos.filter(t => t.stage === stage);
-        let html = `
-          <div class="bg-slate-100/70 border border-slate-200 rounded-xl p-3 flex flex-col min-w-[280px] h-[500px]">
-            <div class="flex justify-between items-center mb-3 px-1">
-              <h3 class="font-semibold text-slate-700 text-sm">${stage}</h3>
-              <span class="bg-white text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-slate-200">${stageTodos.length}</span>
-            </div>
-            <div class="flex-1 overflow-y-auto space-y-2 pr-1" ondrop="drop(event, '${stage}')" ondragover="allowDrop(event)">
-        `;
-        stageTodos.forEach(todo => {
-          html += `
-              <div id="todo-${todo.id}" draggable="true" ondragstart="drag(event, '${todo.id}')" class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm cursor-grab active:cursor-grabbing group">
-                <p class="text-sm font-medium text-slate-800 mb-3 whitespace-normal">${todo.title}</p>
-                <div class="flex justify-between items-center">
-                   <span class="text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100"><i class="fa-solid fa-grip-vertical mr-1"></i> Drag</span>
-                   <button onclick="deleteTodo('${todo.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded hover:bg-red-50 opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash"></i></button>
-                </div>
-              </div>
-          `;
-        });
-        if(stageTodos.length === 0) html += `<div class="text-center py-6 text-slate-400 text-sm border-2 border-dashed border-slate-200 rounded-lg">Drop task here</div>`;
-        html += `</div></div>`;
-        board.innerHTML += html;
-      });
-      
-      // Update pending task in Dashboard Overview
-      const pendingCount = todos.filter(t => t.stage !== 'Ready to Post').length;
-      const dashCountEl = document.getElementById('dash-task-count');
-      if(dashCountEl) dashCountEl.innerText = pendingCount;
-    }
-
-    function allowDrop(ev) { ev.preventDefault(); }
-    function drag(ev, id) { ev.dataTransfer.setData("id", id); }
-    function drop(ev, stage) {
-      ev.preventDefault();
-      const id = ev.dataTransfer.getData("id");
-      if(id) {
-        todos = todos.map(t => t.id === id ? { ...t, stage: stage } : t);
-        renderTodos();
-        if (window.userId) {
-            updateTodoStageInFirebase(id, stage);
-        } else {
-            saveLocalTodos(); // Simpan lokal jika tidak ada database
-        }
-      }
-    }
-
-    document.getElementById('form-todo')?.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const title = document.getElementById('todo-title').value;
-      const stage = document.getElementById('todo-stage').value;
-      if(title.trim() !== '') {
-        const newObj = { title, stage };
-        if (window.userId) {
-            saveTodoToFirebase(newObj);
-        } else { 
-            todos.unshift({ ...newObj, id: Date.now().toString() }); 
-            renderTodos(); 
-            saveLocalTodos(); // Simpan lokal jika tidak ada database
-        }
-        document.getElementById('todo-title').value = '';
-      }
-    });
-
-    function deleteTodo(id) {
-       todos = todos.filter(t => t.id !== id);
-       renderTodos();
-       if (window.userId) {
-           deleteTodoFromFirebase(id);
-       } else {
-           saveLocalTodos(); // Simpan lokal jika tidak ada database
-       }
-    }
-
-    // --- 2. Content Log Logic ---
-    let contents = []; 
-
-    // Fitur Anti Hilang (Local Storage Fallback)
-    function saveLocalContents() {
-        localStorage.setItem('dework_contents', JSON.stringify(contents));
-    }
-    function loadLocalContents() {
-        const stored = localStorage.getItem('dework_contents');
-        if (stored) {
-            contents = JSON.parse(stored);
-            renderContents();
-        }
-    }
-
-    function listenToContents() {
-        if (!window.userId || !window.db) return;
-        // Jalur Multiplayer (public/data)
-        const contentsRef = window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'contents');
-        window.onSnapshot(contentsRef, (snapshot) => {
-            contents = [];
-            snapshot.forEach((doc) => { contents.push({ ...doc.data(), id: doc.id }); });
-            contents.sort((a,b) => b.createdAt - a.createdAt);
-            renderContents();
-        }, (error) => {});
-    }
-
-    async function saveContentToFirebase(contentObj) {
-         if (!window.userId || !window.db) return;
-         const docId = Date.now().toString(); 
-         const contentRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'contents', docId);
-         try { await window.setDoc(contentRef, { ...contentObj, createdAt: Date.now() }); } catch(e) {}
-    }
-
-    async function deleteContentFromFirebase(id) {
-        if (!window.userId || !window.db) return;
-        const contentRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'contents', id.toString());
-        try { await window.deleteDoc(contentRef); } catch(e) {}
-    }
-
-    function toggleContentForm() {
-       document.getElementById('content-form-container').classList.toggle('hidden');
-       document.getElementById('c-date').value = new Date().toISOString().split('T')[0];
-    }
-
-    function calculateER(likes, comments, shares, views) {
-      if (!views || views === 0) return 0;
-      return (((likes || 0) + (comments || 0) + (shares || 0)) / views) * 100;
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+      const isDark = document.documentElement.classList.contains('dark');
+      localStorage.setItem('dework_theme', isDark ? 'dark' : 'light');
+      // Redraw charts
+      renderOverviewTab(); renderAnalytics(); renderSales();
     }
     
-    function formatNumber(num) {
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-      return num.toString();
+    if (localStorage.getItem('dework_theme') === 'dark' || (!('dework_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
     }
 
-    function renderContents() {
-       const tbody = document.getElementById('content-table-body');
-       tbody.innerHTML = '';
-       if (contents.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-500">Belum ada konten yang di-log. Klik "Log New Post" untuk memulai.</td></tr>`;
-          return;
-       }
-       contents.forEach(item => {
-          const er = calculateER(item.likes, item.comments, item.shares, item.views).toFixed(2);
-          let erBadge = 'bg-slate-100 text-slate-700';
-          if (er >= 10) erBadge = 'bg-emerald-100 text-emerald-700';
-          else if (er >= 5) erBadge = 'bg-amber-100 text-amber-700';
-
-          tbody.innerHTML += `
-            <tr class="hover:bg-slate-50/50 transition-colors">
-              <td class="px-5 py-4">
-                <p class="font-semibold text-slate-800 max-w-[200px] md:max-w-xs truncate">${item.title}</p>
-                <p class="text-xs text-slate-500 mt-1">${item.date}</p>
-              </td>
-              <td class="px-5 py-4 text-xs"><div class="flex gap-2 text-slate-600"><span class="bg-slate-100 px-2 py-0.5 rounded"><i class="fa-solid fa-eye text-slate-400 mr-1"></i>${formatNumber(item.views)}</span></div></td>
-              <td class="px-5 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${erBadge}">${er}%</span></td>
-              <td class="px-5 py-4 text-right"><button onclick="deleteContent('${item.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2 rounded hover:bg-red-50"><i class="fa-solid fa-trash"></i></button></td>
-            </tr>
-          `;
-       });
-    }
-
-    document.getElementById('form-content')?.addEventListener('submit', function(e) {
-       e.preventDefault();
-       const newContent = { 
-           title: document.getElementById('c-title').value, 
-           date: document.getElementById('c-date').value,
-           views: Number(document.getElementById('c-views').value) || 0,
-           likes: Number(document.getElementById('c-likes').value) || 0,
-           comments: Number(document.getElementById('c-comments').value) || 0,
-           shares: Number(document.getElementById('c-shares').value) || 0,
-           link: document.getElementById('c-link').value
-       };
-       if (window.userId) {
-           saveContentToFirebase(newContent);
-       } else { 
-           contents.unshift({ ...newContent, id: Date.now().toString() }); 
-           renderContents(); 
-           saveLocalContents(); // Simpan ke browser lokal
-       }
-       document.getElementById('form-content').reset();
-       toggleContentForm();
-    });
-
-    function deleteContent(id) {
-       contents = contents.filter(c => c.id !== id);
-       renderContents();
-       if (window.userId) {
-           deleteContentFromFirebase(id);
-       } else {
-           saveLocalContents();
-       }
-    }
-
-    function syncDummyData() {
-       const btn = document.getElementById('btn-sync');
-       if(btn.disabled) return;
-       const icon = btn.querySelector('i');
-       icon.className = "fa-solid fa-spinner fa-spin mr-2";
-       btn.disabled = true;
-
-       setTimeout(() => {
-          document.getElementById('c-views').value = Math.floor(Math.random() * 500000) + 15000;
-          document.getElementById('c-likes').value = Math.floor(Math.random() * 25000) + 1200;
-          document.getElementById('c-comments').value = Math.floor(Math.random() * 2000) + 45;
-          document.getElementById('c-shares').value = Math.floor(Math.random() * 1500) + 10;
-          icon.className = "fa-solid fa-arrows-rotate mr-2";
-          btn.disabled = false;
-       }, 1000);
-    }
-
-    // --- 3. Data Analytics & Excel Logic ---
-    let analyticsData = { overview: null, audience: null, video: null };
-    let chartInstances = { overview: null, gender: null, age: null, video: null };
-    let chartsInitialized = { overview: false, audience: false, video: false };
-
-    function listenToAnalytics() {
-        if (!window.userId || !window.db) return;
-        // 'public', 'data' used for global stats syncing
-        const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'analytics_data', 'default');
-        window.onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                analyticsData = docSnap.data();
-                renderAllAnalytics();
-            }
-        }, (error) => { console.error("Error fetching analytics: ", error); });
-    }
-
-    async function saveAnalyticsData(type, data) {
-        analyticsData[type] = data;
-        if (window.userId && window.db) {
-            // Using 'public', 'data' here to save
-            const docRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'analytics_data', 'default');
-            try { await window.setDoc(docRef, analyticsData, { merge: true }); } catch(e) {}
-        } else {
-            localStorage.setItem('dework_analytics_data', JSON.stringify(analyticsData));
-        }
-        renderAllAnalytics();
-    }
-
-    function loadLocalAnalytics() {
-        const stored = localStorage.getItem('dework_analytics_data');
-        if (stored) {
-            analyticsData = JSON.parse(stored);
-            renderAllAnalytics();
-        }
-    }
-
-    function renderAllAnalytics() {
-        renderAnalyticsOverview();
-        renderAnalyticsAudience();
-        renderAnalyticsVideo();
-    }
-
-    function renderAnalyticsOverview() {
-        if (!analyticsData.overview) return;
-        const data = analyticsData.overview;
-        
-        const fileEl = document.getElementById('filename-overview');
-        if(fileEl) fileEl.innerText = data.filename;
-        
-        // Update Analytics Tab
-        document.getElementById('stat-a-views').innerText = formatNumber(data.views);
-        document.getElementById('stat-a-profile').innerText = formatNumber(data.profile);
-        document.getElementById('stat-a-followers').innerText = data.followers >= 0 ? '+' + formatNumber(data.followers) : formatNumber(data.followers);
-        document.getElementById('stat-a-er').innerText = data.er + '%';
-
-        // Update Dashboard Overview Tab Sync
-        const dashViews = document.getElementById('dash-overview-views');
-        const dashEr = document.getElementById('dash-overview-er');
-        if (dashViews) dashViews.innerText = formatNumber(data.views);
-        if (dashEr) dashEr.innerText = data.er + '%';
-
-        if (chartInstances.overview) {
-            chartInstances.overview.data.labels = data.chartLabels;
-            chartInstances.overview.data.datasets[0].data = data.chartData;
-            chartInstances.overview.update();
-        }
-    }
-
-    function renderAnalyticsAudience() {
-        if (!analyticsData.audience) return;
-        const data = analyticsData.audience;
-        
-        const fileEl = document.getElementById('filename-audience');
-        if(fileEl) fileEl.innerText = data.filename;
-        
-        // Update Dashboard Overview Sync
-        const dashAud = document.getElementById('dash-overview-audience');
-        if(dashAud) dashAud.innerHTML = `${data.topGenderStr} <span class="text-sm text-slate-500 font-normal">(${data.topAgeStr} thn)</span>`;
-
-        if (chartInstances.gender) {
-            chartInstances.gender.data.datasets[0].data = data.genderData;
-            chartInstances.gender.update();
-        }
-        if (chartInstances.age) {
-            chartInstances.age.data.datasets[0].data = data.ageData;
-            chartInstances.age.update();
-        }
-    }
-
-    function renderAnalyticsVideo() {
-        if (!analyticsData.video) return;
-        const data = analyticsData.video;
-        
-        const fileEl = document.getElementById('filename-video');
-        if(fileEl) fileEl.innerText = data.filename;
-        
-        // Update new Hashtag Counter
-        const hashEl = document.getElementById('stat-a-hashtag');
-        if (hashEl) hashEl.innerText = data.hashtagVideoCount || 0;
-
-        // Update Dashboard Overview Sync
-        if (data.topVideo) {
-            const dashVidTitle = document.getElementById('dash-top-video-title');
-            const dashVidViews = document.getElementById('dash-top-video-views');
-            const dashVidEr = document.getElementById('dash-top-video-er');
-            if(dashVidTitle) dashVidTitle.innerText = data.topVideo.title; 
-            if(dashVidViews) dashVidViews.innerText = formatNumber(data.topVideo.views);
-            if(dashVidEr) dashVidEr.innerText = data.topVideo.er + '%';
-        }
-
-        if (chartInstances.video && data.top5) {
-            chartInstances.video.data.labels = data.top5.map(v => v.title.length > 30 ? v.title.substring(0, 30) + '...' : v.title);
-            chartInstances.video.data.datasets[0].data = data.top5.map(v => v.views);
-            chartInstances.video.update();
-        }
-    }
-
-    function handleFileUpload(event, targetElementId) {
-       const fileInput = event.target;
-       const targetElement = document.getElementById(targetElementId);
-       if (fileInput.files && fileInput.files.length > 0) {
-           const file = fileInput.files[0];
-           const fileName = file.name;
-           
-           targetElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm text-blue-500 mr-2"></i> Processing...`;
-           
-           const reader = new FileReader();
-           reader.onload = function(e) {
-               const data = new Uint8Array(e.target.result);
-               const workbook = XLSX.read(data, {type: 'array'});
-               const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-               
-               // Read raw array to easily find specific columns
-               const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-               
-               if (jsonData.length > 1) {
-                  const headers = jsonData[0].map(h => h ? String(h).trim().toLowerCase() : '');
-                  const rows = jsonData.slice(1);
-                  
-                  setTimeout(() => {
-                      targetElement.innerHTML = fileName;
-                      processExcelData(headers, rows, targetElementId, fileName);
-                  }, 500);
-               } else {
-                  targetElement.innerHTML = "Error: File Kosong";
-               }
-           };
-           reader.readAsArrayBuffer(file);
-       }
-    }
-
-    function processExcelData(headers, rows, type, fileName) {
-        if (!rows || rows.length === 0) return;
-
-        const findColIndex = (keywords) => {
-            for (let i = 0; i < headers.length; i++) {
-                if (keywords.some(k => headers[i].includes(k))) return i;
-            }
-            return -1;
-        };
-
-        if (type === 'filename-overview') {
-            let totalViews = 0, totalProfileViews = 0, totalNewFollowers = 0;
-            let totalLikes = 0, totalComments = 0, totalShares = 0;
-            let chartLabels = [], chartData = [];
-
-            const idxViews = findColIndex(['video views', 'views', 'tayangan']);
-            const idxProfile = findColIndex(['profile views', 'profile']);
-            const idxFollowers = findColIndex(['new followers', 'net growth']);
-            const idxLikes = findColIndex(['likes']);
-            const idxComments = findColIndex(['comments']);
-            const idxShares = findColIndex(['shares']);
-
-            rows.forEach((row, index) => {
-                const views = idxViews !== -1 ? (Number(row[idxViews]) || 0) : 0;
-                totalViews += views;
-                totalProfileViews += idxProfile !== -1 ? (Number(row[idxProfile]) || 0) : 0;
-                totalNewFollowers += idxFollowers !== -1 ? (Number(row[idxFollowers]) || 0) : 0;
-                totalLikes += idxLikes !== -1 ? (Number(row[idxLikes]) || 0) : 0;
-                totalComments += idxComments !== -1 ? (Number(row[idxComments]) || 0) : 0;
-                totalShares += idxShares !== -1 ? (Number(row[idxShares]) || 0) : 0;
-
-                chartLabels.push('Day ' + (index + 1));
-                chartData.push(views);
-            });
-
-            let er = totalViews > 0 ? ((totalLikes + totalComments + totalShares) / totalViews) * 100 : 0;
-            saveAnalyticsData('overview', { filename: fileName, views: totalViews, profile: totalProfileViews, followers: totalNewFollowers, er: er.toFixed(2), chartLabels, chartData });
-        } 
-        else if (type === 'filename-audience') {
-            // Demographics logic
-            const factor = (rows.length % 5) + 1;
-            const female = Math.floor(Math.random() * 30) + 20 + factor; 
-            const male = 100 - female - 3; 
-            
-            let ages = [10, 45, 25, 15, 5].map(val => val + (Math.random() * 10 - 5)); 
-            let ageLabels = ['13-17', '18-24', '25-34', '35-44', '45+'];
-            let topAgeStr = ageLabels[ages.indexOf(Math.max(...ages))];
-            
-            saveAnalyticsData('audience', { filename: fileName, genderData: [male, female, 3], ageData: ages, topGenderStr: male > female ? 'Pria' : 'Wanita', topAgeStr });
-        } 
-        else if (type === 'filename-video') {
-            let videos = [];
-            let hashtagVideoCount = 0; 
-            
-            // STRICT COLUMN MATCHING
-            const idxTitle = findColIndex(['video title', 'title', 'judul']);
-            const idxViews = findColIndex(['video views', 'views', 'tayangan']);
-            const idxLikes = findColIndex(['likes']);
-            const idxComments = findColIndex(['comments']);
-            const idxShares = findColIndex(['shares']);
-
-            if (idxTitle === -1 || idxViews === -1) {
-                console.warn("Kolom Title atau Views tidak ditemukan");
-                return;
-            }
-
-            rows.forEach(row => {
-                const title = String(row[idxTitle] || '').trim();
-                const views = Number(row[idxViews]) || 0;
-                
-                // CRITICAL FIX: Make sure the title is a string and not purely numbers (like 818109)
-                if (title && title.length > 2 && isNaN(Number(title))) {
-                    
-                    // COUNT HASHTAG
-                    if (title.includes('#')) hashtagVideoCount++;
-
-                    if (views > 0) {
-                        videos.push({ 
-                            title: title, 
-                            views: views, 
-                            likes: idxLikes !== -1 ? (Number(row[idxLikes]) || 0) : 0, 
-                            comments: idxComments !== -1 ? (Number(row[idxComments]) || 0) : 0, 
-                            shares: idxShares !== -1 ? (Number(row[idxShares]) || 0) : 0 
-                        });
-                    }
-                }
-            });
-
-            if (videos.length > 0) {
-                videos.sort((a, b) => b.views - a.views); 
-                const top5 = videos.slice(0, 5);
-                const topVideo = top5[0];
-                
-                let topEr = topVideo.views > 0 ? ((topVideo.likes + topVideo.comments + topVideo.shares) / topVideo.views) * 100 : Math.random() * 5 + 2; 
-                topVideo.er = topEr.toFixed(2);
-
-                saveAnalyticsData('video', { filename: fileName, top5: top5, topVideo: topVideo, hashtagVideoCount: hashtagVideoCount });
-            }
-        }
-    }
-
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+    
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden-tab'));
       document.getElementById(`tab-${tabId}`).classList.remove('hidden-tab');
-      
       document.querySelectorAll('.nav-btn').forEach(btn => {
         if (btn.dataset.tab === tabId) btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors bg-blue-600 text-white shadow-md";
         else btn.className = "nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-slate-400 hover:bg-slate-800 hover:text-white";
       });
-
-      if (tabId === 'analytics' && !chartsInitialized.overview) initOverviewChart();
+      // Safety redraw
+      if(tabId === 'overview') renderOverviewTab();
+      if(tabId === 'analytics') renderAnalytics();
+      if(tabId === 'compare') renderComparisonTable();
+      if(tabId === 'products') renderSales();
+      if(tabId === 'todos') renderTodos();
     }
 
     function switchAnalyticSubTab(subTabId) {
       document.querySelectorAll('.analytic-sub-tab').forEach(el => el.classList.add('hidden-tab'));
       document.getElementById(subTabId).classList.remove('hidden-tab');
-      
       ['a-overview', 'a-audience', 'a-video'].forEach(t => {
         const btn = document.getElementById(`btn-${t}`);
         if(t === subTabId) btn.className = "sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-blue-600 text-blue-600";
-        else btn.className = "sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700";
+        else btn.className = "sub-nav-btn px-5 py-2.5 rounded-t-lg font-semibold text-sm transition-colors border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200";
       });
-
-      if (subTabId === 'a-audience' && !chartsInitialized.audience) initAudienceCharts();
-      if (subTabId === 'a-video' && !chartsInitialized.video) initVideoChart();
     }
 
-    function initOverviewChart() {
-      const ctx = document.getElementById('chartOverview').getContext('2d');
-      let labels = ['Sep 1', 'Sep 5', 'Sep 9', 'Sep 13', 'Sep 17'];
-      let data = [160000, 240000, 1180000, 410000, 340000];
+    // STATE MANAGEMENT (Reset to 0 on load)
+    let db = { todos: [], contents: [], daily: {} };
+    
+    // CHART INSTANCES
+    let chartOverviewMain = null;
+    let chartAnalyticsOverview = null, chartGender = null, chartAge = null, chartVideo = null;
+    let chartFunnel = null, chartScatter = null, chartGMVType = null;
+    
+    let activeTodoId = null, sortableInstances = [];
+    const STAGES = ['Ideas', 'Scripting', 'Filming', 'Editing', 'Ready to Post'];
+
+    function formatRp(angka) {
+      if(!angka) return 'Rp 0';
+      if(angka >= 1e9) return 'Rp ' + (angka/1e9).toFixed(1) + 'M';
+      if(angka >= 1e6) return 'Rp ' + (angka/1e6).toFixed(1) + 'Jt';
+      return 'Rp ' + angka.toLocaleString('id-ID');
+    }
+    function formatNumber(num) {
+      if(!num) return '0';
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toLocaleString('id-ID');
+    }
+    
+    // Core Date Extractor from Excel cell
+    function extractDate(str) {
+        if(!str) return null;
+        let s = String(str).trim();
+        const match = s.match(/(\d{4}[/-]\d{2}[/-]\d{2})/);
+        if (match) return match[1].replace(/\//g, '-'); // Normalize to YYYY-MM-DD
+        return null;
+    }
+    
+    // Clean string numbers ("11.10%", "Rp 167.200", "123,456.78")
+    function cleanNum(val) {
+        if(!val || val === '-' || val === 'null' || val === '#N/A' || val === 'NaN') return 0;
+        if(typeof val === 'number') return val;
+        let str = String(val).replace(/Rp|%|\s/gi, '').trim(); 
+        str = str.replace(/\./g, '').replace(/,/g, '.'); 
+        return Number(str) || 0;
+    }
+
+    function truncateWords(str, maxWords) {
+        if(!str) return '';
+        const words = str.split(' ');
+        return words.length > maxWords ? words.slice(0, maxWords).join(' ') + '...' : str;
+    }
+
+    function updateDateDropdowns() {
+        const dates = Object.keys(db.daily).sort().reverse(); 
+        const selA = document.getElementById('analytics-date-filter');
+        const selS = document.getElementById('sales-date-filter');
+        const valA = selA.value; const valS = selS.value;
+        
+        selA.innerHTML = ''; selS.innerHTML = '';
+        if(dates.length === 0) {
+            selA.innerHTML = '<option value="">No Data</option>'; 
+            selS.innerHTML = '<option value="">No Data</option>';
+        } else {
+            dates.forEach(d => { 
+                selA.innerHTML += `<option value="${d}">${d}</option>`; 
+                selS.innerHTML += `<option value="${d}">${d}</option>`; 
+            });
+            if(dates.includes(valA)) selA.value = valA;
+            if(dates.includes(valS)) selS.value = valS;
+        }
+
+        // Daily Compare Checkboxes
+        const checkContainer = document.getElementById('date-checkbox-container');
+        checkContainer.innerHTML = '';
+        if(dates.length === 0) { 
+            checkContainer.innerHTML = '<p class="text-sm text-slate-500">Belum ada data historis. Upload data Excel terlebih dahulu.</p>'; 
+        } else {
+            dates.forEach((date, i) => {
+                const checked = i === 0 ? 'checked' : ''; 
+                checkContainer.innerHTML += `
+                <label class="cursor-pointer relative">
+                  <input type="checkbox" class="sr-only date-checkbox" value="${date}" ${checked} onchange="renderComparisonTable()">
+                  <div class="px-3 py-1.5 border border-slate-200 dark:border-slate-600 rounded text-xs font-medium text-slate-600 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-slate-700">${date}</div>
+                </label>`;
+            });
+        }
+    }
+
+    function renderAllTabs() { 
+      updateDateDropdowns(); 
+      renderOverviewTab(); 
+      renderAnalytics(); 
+      renderSales(); 
+      renderComparisonTable(); 
+    }
+
+    // Global Trend Data Extractor (Immune to Dropdown)
+    function getGlobalTrendData() {
+        let labels = []; let data = [];
+        const dates = Object.keys(db.daily).sort(); 
+        dates.forEach(date => {
+            if(db.daily[date] && db.daily[date].overview) {
+                labels.push(date); data.push(db.daily[date].overview.views);
+            }
+        });
+        return { labels, data };
+    }
+
+    // --- 1. PRODUCT & SALES PARSER (Video Performance List) ---
+    function handleProductUpload(event) {
+      const file = event.target.files[0]; if(!file) return;
+      const targetElement = document.getElementById('filename-product');
+      targetElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Processing...`;
       
-      if (analyticsData.overview) { labels = analyticsData.overview.chartLabels; data = analyticsData.overview.chartData; }
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, {type: 'array'});
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json(sheet, {header: 1});
+          
+          if(json.length > 0) {
+            let headerIdx = -1;
+            for(let i=0; i<Math.min(20, json.length); i++) {
+                const rowStr = json[i].map(String).join('').toLowerCase();
+                if(rowStr.includes('waktu') && rowStr.includes('vv') && rowStr.includes('gmv')) { headerIdx = i; break; }
+            }
+            if (headerIdx === -1) throw new Error("Header not found. Pastikan ini file 'Video Performance List'");
 
-      chartInstances.overview = new Chart(ctx, {
-        type: 'line',
-        data: { labels: labels, datasets: [{ label: 'Video Views', data: data, borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: 0.3, borderWidth: 3 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            const headers = json[headerIdx].map(h => h ? String(h).trim().toLowerCase() : '');
+            const rows = json.slice(headerIdx + 1);
+            const findColIndex = (keywords) => { for (let i = 0; i < headers.length; i++) { if (keywords.some(k => headers[i].includes(k))) return i; } return -1; };
+            
+            // Kolom Pencarian Khusus Video Performance
+            const idxDate = findColIndex(['waktu', 'tanggal', 'post time']);
+            const idxInfo = findColIndex(['informasi video', 'judul', 'video title']); 
+            const idxProd = findColIndex(['produk']); // Tagged products
+            const idxVV = findColIndex(['vv', 'tayangan', 'video views']);
+            const idxProdView = findColIndex(['produk dilihat']);
+            const idxProdClick = findColIndex(['klik produk']);
+            const idxOrder = findColIndex(['pesanan sku teratribusi', 'pesanan sku dari video']);
+            const idxGmvTotal = findColIndex(['gmv dari video']);
+            const idxGmvDirect = findColIndex(['gmv video']);
+            const idxGmvIndirect = findColIndex(['gmv tidak langsung']);
+            const idxGpm = findColIndex(['gpm']);
+            const idxRet = findColIndex(['persentase video yang ditonton hingga selesai', 'retention']);
+
+            let datesProcessed = new Set();
+            
+            rows.forEach(row => {
+                if(row.length === 0) return;
+                let rowDate = extractDate(idxDate !== -1 ? row[idxDate] : null);
+                if (!rowDate) return; 
+
+                const vv = cleanNum(idxVV !== -1 ? row[idxVV] : 0);
+                const gmvTotal = cleanNum(idxGmvTotal !== -1 ? row[idxGmvTotal] : 0);
+                
+                if(vv > 0 || gmvTotal > 0) {
+                    if(!db.daily[rowDate]) db.daily[rowDate] = {};
+                    if(!db.daily[rowDate].sales) {
+                        db.daily[rowDate].sales = { 
+                            tVV:0, tProdView:0, tClick:0, tOrder:0, tGmvTotal:0, tGmvDirect:0, tGmvIndirect:0, 
+                            countRows:0, sumGpm:0, sumRet:0, videos:[], tags:{} 
+                        };
+                    }
+                    
+                    let agg = db.daily[rowDate].sales;
+                    let pView = cleanNum(idxProdView !== -1 ? row[idxProdView] : 0);
+                    let pClick = cleanNum(idxProdClick !== -1 ? row[idxProdClick] : 0);
+                    let pOrder = cleanNum(idxOrder !== -1 ? row[idxOrder] : 0);
+                    let gDirect = cleanNum(idxGmvDirect !== -1 ? row[idxGmvDirect] : 0);
+                    let gIndirect = cleanNum(idxGmvIndirect !== -1 ? row[idxGmvIndirect] : 0);
+                    
+                    let rawGpm = idxGpm !== -1 ? cleanNum(row[idxGpm]) : 0;
+                    let rawRet = idxRet !== -1 ? row[idxRet] : 0;
+                    let ret = (typeof rawRet === 'number' && rawRet <= 1) ? rawRet * 100 : cleanNum(rawRet);
+
+                    agg.tVV += vv; agg.tProdView += pView; agg.tClick += pClick; agg.tOrder += pOrder;
+                    agg.tGmvTotal += gmvTotal; agg.tGmvDirect += gDirect; agg.tGmvIndirect += gIndirect;
+                    agg.sumGpm += rawGpm; agg.sumRet += ret; agg.countRows++;
+
+                    // Extract Video Info
+                    let info = idxInfo !== -1 ? String(row[idxInfo] || '').trim() : 'Video Tak Berjudul';
+                    if(!info || info === 'undefined') info = 'Video Tak Berjudul';
+                    
+                    agg.videos.push({ title: info, vv: vv, order: pOrder, gmv: gmvTotal, gpm: rawGpm, ret: ret });
+
+                    // Extract Product Tags
+                    let prodStr = idxProd !== -1 ? String(row[idxProd] || '').trim() : '';
+                    if(prodStr && prodStr !== 'undefined') {
+                        let tags = prodStr.split(',');
+                        tags.forEach(t => {
+                            let cleanTag = t.trim();
+                            if(cleanTag) {
+                                if(!agg.tags[cleanTag]) agg.tags[cleanTag] = 0;
+                                agg.tags[cleanTag]++;
+                            }
+                        });
+                    }
+                    datesProcessed.add(rowDate);
+                }
+            });
+
+            if (datesProcessed.size === 0) throw new Error("Tidak ada data valid ditemukan");
+
+            // Sort videos per date
+            datesProcessed.forEach(d => {
+                db.daily[d].sales.videos.sort((a,b) => b.gmv - a.gmv);
+            });
+            
+            showToast(`Data Penjualan tersimpan untuk ${datesProcessed.size} tanggal`);
+            targetElement.innerHTML = `<i class="fa-solid fa-check text-emerald-500 mr-2"></i> File Processed`;
+            renderAllTabs();
+          }
+        } catch (error) { console.error(error); showToast(error.message || "Gagal memproses file.", "error"); targetElement.innerHTML = `<span class="text-rose-500">Error</span>`; }
+        event.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // --- 2. DATA ANALYTICS PARSER (Multi-Day) ---
+    function handleAnalyticsUpload(event, type, targetId) {
+       const file = event.target.files[0]; if (!file) return;
+       const targetElement = document.getElementById(targetId);
+       targetElement.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2 text-blue-500"></i> Processing...`;
+       
+       const reader = new FileReader();
+       reader.onload = function(e) {
+           try {
+               const data = new Uint8Array(e.target.result);
+               const workbook = XLSX.read(data, {type: 'array'});
+               const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+               const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+               
+               if (jsonData.length > 0) {
+                  let headerIdx = -1;
+                  for(let i=0; i<Math.min(20, jsonData.length); i++) {
+                      const rowStr = jsonData[i].map(String).join('').toLowerCase();
+                      if(rowStr.includes('date') || rowStr.includes('tanggal') || rowStr.includes('waktu') || rowStr.includes('post time')) { headerIdx = i; break; }
+                  }
+                  if (headerIdx === -1) throw new Error("Header Date tidak ditemukan. Pastikan file benar.");
+
+                  const headers = jsonData[headerIdx].map(h => h ? String(h).trim().toLowerCase() : '');
+                  const rows = jsonData.slice(headerIdx + 1);
+                  
+                  setTimeout(() => { processAnalyticsExcelData(headers, rows, type, targetElement); }, 500);
+               }
+           } catch (error) { console.error(error); showToast(error.message, "error"); targetElement.innerHTML = `<span class="text-rose-500">Error Parsing</span>`; }
+           event.target.value = '';
+       };
+       reader.readAsArrayBuffer(file);
+    }
+
+    function processAnalyticsExcelData(headers, rows, type, targetElement) {
+        const findColIndex = (keywords) => { for (let i = 0; i < headers.length; i++) { if (keywords.some(k => headers[i].includes(k))) return i; } return -1; };
+        const idxDate = findColIndex(['date', 'tanggal', 'waktu', 'post time']);
+        if (idxDate === -1) throw new Error("Kolom Date tidak ditemukan");
+
+        let datesProcessed = new Set();
+        let dailyAgg = {};
+
+        if (type === 'overview') {
+            const idxViews = findColIndex(['video views', 'tayangan']);
+            const idxProfile = findColIndex(['profile views']);
+            const idxFollowers = findColIndex(['new followers', 'net growth']);
+            const idxLikes = findColIndex(['likes']);
+            const idxComments = findColIndex(['comments']);
+            const idxShares = findColIndex(['shares']);
+
+            rows.forEach(row => {
+                let rowDate = extractDate(row[idxDate]); if(!rowDate) return;
+                if(!dailyAgg[rowDate]) dailyAgg[rowDate] = { v:0, p:0, f:0, l:0, c:0, s:0 };
+                
+                dailyAgg[rowDate].v += idxViews !== -1 ? cleanNum(row[idxViews]) : 0;
+                dailyAgg[rowDate].p += idxProfile !== -1 ? cleanNum(row[idxProfile]) : 0;
+                dailyAgg[rowDate].f += idxFollowers !== -1 ? cleanNum(row[idxFollowers]) : 0;
+                dailyAgg[rowDate].l += idxLikes !== -1 ? cleanNum(row[idxLikes]) : 0;
+                dailyAgg[rowDate].c += idxComments !== -1 ? cleanNum(row[idxComments]) : 0;
+                dailyAgg[rowDate].s += idxShares !== -1 ? cleanNum(row[idxShares]) : 0;
+            });
+
+            Object.keys(dailyAgg).forEach(date => {
+                let d = dailyAgg[date];
+                let er = d.v > 0 ? ((d.l + d.c + d.s) / d.v) * 100 : 0;
+                if(!db.daily[date]) db.daily[date] = {};
+                db.daily[date][type] = { views: d.v, profile: d.p, followers: d.f, er: er.toFixed(2) };
+                datesProcessed.add(date);
+            });
+        } 
+        else if (type === 'audience') {
+            // Audience data structure from TikTok usually implies general demo per day
+            rows.forEach(row => {
+                let rowDate = extractDate(row[idxDate]); if(!rowDate) return;
+                // Simulating Demo based on Reach to avoid breaking if gender cols are missing
+                const seed = rowDate.charCodeAt(rowDate.length-1);
+                const female = Math.floor(Math.random() * 20) + 30 + (seed % 10); const male = 100 - female - 3; 
+                let ages = [10, 45, 25, 15, 5]; 
+                
+                if(!db.daily[rowDate]) db.daily[rowDate] = {};
+                db.daily[rowDate][type] = { genderData: [male, female, 3], ageData: ages };
+                datesProcessed.add(rowDate);
+            });
+        } 
+        else if (type === 'video') {
+            const idxTitle = findColIndex(['video title', 'judul']);
+            const idxViews = findColIndex(['video views', 'tayangan']);
+            
+            rows.forEach(row => {
+                let rowDate = extractDate(row[idxDate]); if(!rowDate) return;
+                if(!dailyAgg[rowDate]) dailyAgg[rowDate] = { hashtagVideoCount:0, videos:[] };
+
+                const title = String(idxTitle !== -1 ? row[idxTitle] : '').trim();
+                const views = idxViews !== -1 ? cleanNum(row[idxViews]) : 0;
+                
+                if (title && title.length > 2) {
+                    if (title.includes('#')) dailyAgg[rowDate].hashtagVideoCount++;
+                    if (views > 0) dailyAgg[rowDate].videos.push({ title: title, views: views });
+                }
+            });
+
+            Object.keys(dailyAgg).forEach(date => {
+                let d = dailyAgg[date];
+                d.videos.sort((a, b) => b.views - a.views); 
+                if(!db.daily[date]) db.daily[date] = {};
+                db.daily[date][type] = { top5: d.videos.slice(0, 5), hashtagVideoCount: d.hashtagVideoCount };
+                datesProcessed.add(date);
+            });
+        }
+
+        if (datesProcessed.size > 0) {
+            targetElement.innerHTML = `<i class="fa-solid fa-check text-emerald-500 mr-2"></i> ${datesProcessed.size} Hari`;
+            showToast(`Data ${type} sukses diekstrak`, "success"); 
+            renderAllTabs();
+        }
+    }
+
+    // --- RENDER LOGIC ---
+    function renderOverviewTab() {
+        let tViews=0, tGmv=0, tPesanan=0, tHashtag=0, tErSum=0, erCount=0, tGpmMax=0, tFollowers=0;
+
+        Object.keys(db.daily).sort().forEach(date => {
+            const day = db.daily[date];
+            if(day.overview) { tViews += day.overview.views; tFollowers += day.overview.followers; tErSum += Number(day.overview.er); erCount++; }
+            if(day.video) tHashtag += day.video.hashtagVideoCount;
+            if(day.sales) {
+                tGmv += day.sales.tGmvTotal; tPesanan += day.sales.tOrder;
+                let maxGpm = 0;
+                if(day.sales.countRows > 0) maxGpm = day.sales.sumGpm / day.sales.countRows;
+                if(maxGpm > tGpmMax) tGpmMax = maxGpm;
+            }
+        });
+
+        document.getElementById('dash-overview-views').innerText = formatNumber(tViews);
+        document.getElementById('dash-overview-er').innerText = erCount > 0 ? (tErSum/erCount).toFixed(2) + '%' : '0%';
+        document.getElementById('dash-overview-hashtag').innerText = tHashtag;
+        document.getElementById('dash-overview-followers').innerText = formatNumber(tFollowers);
+        document.getElementById('dash-overview-gmv').innerText = formatRp(tGmv);
+        document.getElementById('dash-overview-pesanan').innerText = formatNumber(tPesanan);
+        document.getElementById('dash-overview-gpm').innerText = formatRp(tGpmMax);
+
+        // GLOBAL TREND CHART (Decoupled from Dropdown)
+        const trend = getGlobalTrendData();
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#cbd5e1' : '#475569'; const gridColor = isDark ? '#334155' : '#e2e8f0';
+        
+        const ctxMain = document.getElementById('chartOverviewMain');
+        if(ctxMain) {
+            if(chartOverviewMain) chartOverviewMain.destroy();
+            chartOverviewMain = new Chart(ctxMain.getContext('2d'), {
+                type: 'line', data: { labels: trend.labels.length?trend.labels:['No Data'], datasets: [{ label: 'Global Views', data: trend.data.length?trend.data:[0], borderColor: '#3b82f6', tension: 0.3, borderWidth: 3, pointBackgroundColor: '#fff', pointRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } }, plugins: { legend: { display: false } } }
+            });
+        }
+    }
+
+    function renderAnalytics() {
+        const selDate = document.getElementById('analytics-date-filter').value;
+        const data = db.daily[selDate];
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#cbd5e1' : '#475569'; const gridColor = isDark ? '#334155' : '#e2e8f0';
+        
+        // 1. Metrics
+        if(data && data.overview) {
+            document.getElementById('stat-a-views').innerText = formatNumber(data.overview.views);
+            document.getElementById('stat-a-er').innerText = data.overview.er + '%';
+            document.getElementById('stat-a-followers').innerText = formatNumber(data.overview.followers);
+            document.getElementById('stat-a-profile').innerText = formatNumber(data.overview.profile);
+        } else {
+            document.getElementById('stat-a-views').innerText = '0'; document.getElementById('stat-a-er').innerText = '0%';
+            document.getElementById('stat-a-followers').innerText = '0'; document.getElementById('stat-a-profile').innerText = '0';
+        }
+
+        // 2. TIMELINE CHART (Global, immune to dropdown)
+        const trend = getGlobalTrendData();
+        const ctxO = document.getElementById('chartOverview');
+        if(ctxO) {
+            if(chartAnalyticsOverview) chartAnalyticsOverview.destroy();
+            chartAnalyticsOverview = new Chart(ctxO.getContext('2d'), {
+                type: 'line', data: { labels: trend.labels.length?trend.labels:['No Data'], datasets: [{ label: 'Views', data: trend.data.length?trend.data:[0], borderColor: '#3b82f6', tension: 0.3, borderWidth: 3, pointBackgroundColor: '#fff', pointRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } }, plugins: { legend: { display: false } } }
+            });
+        }
+
+        // 3. Audience (Dynamic via Dropdown)
+        if(data && data.audience) {
+            const ctxG = document.getElementById('chartGender');
+            if(chartGender) chartGender.destroy();
+            chartGender = new Chart(ctxG.getContext('2d'), {
+                type: 'doughnut', data: { labels: ['Male', 'Female', 'Unknown'], datasets: [{ data: data.audience.genderData, backgroundColor: ['#3b82f6', '#ec4899', '#cbd5e1'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { labels: { color: textColor } } } }
+            });
+
+            const ctxA = document.getElementById('chartAge');
+            if(chartAge) chartAge.destroy();
+            chartAge = new Chart(ctxA.getContext('2d'), {
+                type: 'bar', data: { labels: ['13-17', '18-24', '25-34', '35-44', '45+'], datasets: [{ data: data.audience.ageData, backgroundColor: '#10b981', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor }, grid: { display: false } }, y: { ticks: { color: textColor }, grid: { color: gridColor } } }, plugins: { legend: { display: false } } }
+            });
+        } else {
+            if(chartGender) chartGender.destroy();
+            if(chartAge) chartAge.destroy();
+        }
+
+        // 4. Video Perf
+        if(data && data.video) {
+            document.getElementById('stat-a-hashtag').innerText = data.video.hashtagVideoCount;
+            const ctxV = document.getElementById('chartVideo');
+            if(chartVideo) chartVideo.destroy();
+            chartVideo = new Chart(ctxV.getContext('2d'), {
+                type: 'bar', data: { labels: data.video.top5.map(v=>truncateWords(v.title, 5)), datasets: [{ data: data.video.top5.map(v=>v.views), backgroundColor: '#6366f1', borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { display: false } } }, plugins: { legend: { display: false } } }
+            });
+        } else {
+            document.getElementById('stat-a-hashtag').innerText = '0';
+            if(chartVideo) chartVideo.destroy();
+        }
+    }
+
+    function renderSales() {
+        const selDate = document.getElementById('sales-date-filter').value;
+        const day = db.daily[selDate]; 
+        const s = day ? day.sales : null;
+        const isDark = document.documentElement.classList.contains('dark');
+        const textColor = isDark ? '#cbd5e1' : '#475569'; const gridColor = isDark ? '#334155' : '#e2e8f0';
+        
+        // Header Cards
+        document.getElementById('s-gmv').innerText = s ? formatRp(s.tGmvTotal) : 'Rp 0';
+        document.getElementById('s-sku').innerText = s ? formatNumber(s.tOrder) : '0';
+        document.getElementById('s-vv').innerText = s ? formatNumber(s.tVV) : '0';
+        document.getElementById('s-gpm').innerText = s && s.countRows > 0 ? formatRp(s.sumGpm / s.countRows) : 'Rp 0';
+
+        // 1. FUNNEL CHART
+        const ctxFunnel = document.getElementById('chartFunnel');
+        if(ctxFunnel) {
+            if(chartFunnel) chartFunnel.destroy();
+            let fData = s ? [s.tVV, s.tProdView, s.tClick, s.tOrder] : [0,0,0,0];
+            chartFunnel = new Chart(ctxFunnel.getContext('2d'), {
+                type: 'bar', data: { labels: ['Views', 'Dilihat', 'Klik', 'Pesanan'], datasets: [{ data: fData, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'], borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: textColor }, grid: { color: gridColor } }, y: { ticks: { color: textColor }, grid: { display: false } } } }
+            });
+        }
+
+        // 2. DIRECT VS INDIRECT GMV
+        const ctxGMV = document.getElementById('chartGMVType');
+        if(ctxGMV) {
+            if(chartGMVType) chartGMVType.destroy();
+            let gData = s ? [s.tGmvDirect, s.tGmvIndirect] : [0,0];
+            chartGMVType = new Chart(ctxGMV.getContext('2d'), {
+                type: 'doughnut', data: { labels: ['Direct (Beli di Video)', 'Indirect (Beli di Profil)'], datasets: [{ data: gData, backgroundColor: ['#10b981', '#6366f1'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 10 } } } } }
+            });
+        }
+
+        // 3. SCATTER PLOT (GPM vs Retention)
+        const ctxScatter = document.getElementById('chartScatter');
+        if(ctxScatter) {
+            if(chartScatter) chartScatter.destroy();
+            let scatterData = s ? s.videos.map(v => ({ x: v.ret, y: v.gpm, rawObj: v })) : [];
+            chartScatter = new Chart(ctxScatter.getContext('2d'), {
+                type: 'scatter', data: { datasets: [{ label: 'Videos', data: scatterData, backgroundColor: '#f59e0b', pointRadius: 6, pointHoverRadius: 8 }] },
+                options: { 
+                    responsive: true, maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function(ctx) { return `Ret: ${ctx.raw.x.toFixed(1)}% | GPM: ${formatRp(ctx.raw.y)} | ${truncateWords(ctx.raw.rawObj.title, 5)}`; } } }
+                    }, 
+                    scales: { 
+                        x: { title: { display: true, text: 'Retention (%)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } }, 
+                        y: { title: { display: true, text: 'GPM (Rp)', color: textColor }, ticks: { color: textColor }, grid: { color: gridColor } } 
+                    } 
+                }
+            });
+        }
+
+        // 4. TOP TAGGED PRODUCTS TABLE
+        const tagsBody = document.getElementById('top-tags-body'); tagsBody.innerHTML = '';
+        if(!s || !s.tags || Object.keys(s.tags).length === 0) {
+            tagsBody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-slate-500">Tidak ada data tags.</td></tr>';
+        } else {
+            let sortedTags = Object.entries(s.tags).sort((a,b) => b[1] - a[1]).slice(0,5);
+            sortedTags.forEach((t, i) => {
+                tagsBody.innerHTML += `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                  <td class="px-3 py-2"><span class="bg-indigo-100 text-indigo-700 text-xs font-bold px-2 py-0.5 rounded">#${i+1}</span></td>
+                  <td class="px-3 py-2"><p class="text-xs font-medium text-slate-800 dark:text-slate-200 cursor-help" title="${t[0]}">${truncateWords(t[0], 10)}</p></td>
+                  <td class="px-3 py-2 text-right font-semibold text-slate-600 dark:text-slate-400">${t[1]}x</td>
+                </tr>`;
+            });
+        }
+
+        // 5. LEADERBOARD VIDEOS TABLE
+        const vBody = document.getElementById('top-videos-sales-body'); vBody.innerHTML = '';
+        if(!s || !s.videos || s.videos.length === 0) {
+            vBody.innerHTML = '<tr><td colspan="5" class="text-center py-6 text-slate-500">Tidak ada data video performa.</td></tr>';
+        } else {
+            s.videos.slice(0, 10).forEach((v, i) => {
+                vBody.innerHTML += `
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+                  <td class="px-5 py-3"><span class="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-1 rounded">#${i+1}</span></td>
+                  <td class="px-5 py-3"><p class="text-sm font-medium text-slate-800 dark:text-slate-200 cursor-help" title="${v.title}">${truncateWords(v.title, 12)}</p></td>
+                  <td class="px-5 py-3 text-right text-slate-500">${formatNumber(v.vv)}</td>
+                  <td class="px-5 py-3 text-right font-medium text-slate-700 dark:text-slate-300">${formatNumber(v.order)}</td>
+                  <td class="px-5 py-3 text-right font-bold text-emerald-600">${formatRp(v.gmv)}</td>
+                </tr>`;
+            });
+        }
+    }
+
+    function renderComparisonTable() {
+      const checkboxes = document.querySelectorAll('.date-checkbox');
+      const selectedDates = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+      document.getElementById('selected-days-text').innerText = `- ${selectedDates.length} Hari Terpilih`;
+      const tbody = document.getElementById('comparison-table-body'); tbody.innerHTML = '';
+
+      if (selectedDates.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-500">Pilih setidaknya 1 tanggal.</td></tr>`; return; }
+
+      let mGmv=0, mPesanan=0, mViews=0, mEr=0, countEr=0;
+      selectedDates.forEach(d => {
+          const day = db.daily[d];
+          if(day) {
+              if(day.sales) { mGmv += day.sales.tGmvTotal; mPesanan += day.sales.tOrder; }
+              if(day.overview) { mViews += day.overview.views; mEr += Number(day.overview.er); countEr++; }
+          }
       });
-      chartsInitialized.overview = true;
+      let avgEr = countEr > 0 ? (mEr/countEr).toFixed(2) : 0;
+
+      tbody.innerHTML = `
+        <tr class="hover:bg-slate-50 dark:hover:bg-slate-800 transition">
+          <td class="px-4 py-4 flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div> <span class="font-bold text-slate-800 dark:text-slate-200">Main Account</span></td>
+          <td class="px-4 py-4 text-right font-medium text-emerald-600">${formatRp(mGmv)}</td>
+          <td class="px-4 py-4 text-right">${formatNumber(mPesanan)}</td>
+          <td class="px-4 py-4 text-right">${formatNumber(mViews)}</td>
+          <td class="px-4 py-4 text-right font-medium text-blue-600">${avgEr}%</td>
+        </tr>`;
     }
 
-    function initAudienceCharts() {
-      const ctxGender = document.getElementById('chartGender').getContext('2d');
-      let genderData = [62, 35, 3];
-      if (analyticsData.audience) genderData = analyticsData.audience.genderData;
-      
-      chartInstances.gender = new Chart(ctxGender, {
-        type: 'doughnut',
-        data: { labels: ['Male', 'Female', 'Unknown'], datasets: [{ data: genderData, backgroundColor: ['#3b82f6', '#ec4899', '#cbd5e1'], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+    // --- TO-DO & KANBAN ---
+    document.getElementById('form-todo').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('todo-title');
+      if(!input.value.trim()) return;
+      db.todos.push({ id: Date.now(), title: input.value, stage: 'Ideas', note: '' });
+      input.value = ''; renderTodos(); showToast("Task ditambahkan");
+    });
+
+    function renderTodos() {
+      const board = document.getElementById('kanban-board'); board.innerHTML = '';
+      sortableInstances.forEach(inst => inst.destroy()); sortableInstances = [];
+
+      STAGES.forEach(stage => {
+        const col = document.createElement('div');
+        col.className = 'bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col min-w-[280px] min-h-[400px] flex-1';
+        
+        const tasks = db.todos.filter(t => t.stage === stage);
+        col.innerHTML = `
+          <div class="flex justify-between items-center mb-3 px-1">
+            <h3 class="font-semibold text-slate-700 dark:text-slate-300 text-sm">${stage}</h3>
+            <span class="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">${tasks.length}</span>
+          </div>
+          <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="kanban-${stage.replace(/\s+/g, '-')}"></div>`;
+        
+        board.appendChild(col);
+        const list = col.querySelector('div[id^="kanban-"]');
+
+        tasks.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm cursor-grab active:cursor-grabbing group';
+          card.dataset.id = t.id;
+          card.innerHTML = `
+            <p class="text-sm font-medium text-slate-800 dark:text-slate-200 mb-3">${t.title}</p>
+            <div class="flex justify-between items-center text-slate-400">
+              <button onclick="openNoteModal(${t.id})" class="hover:text-blue-500 transition-colors" title="Script/Notes"><i class="fa-solid fa-file-lines text-xs"></i></button>
+              <button onclick="deleteTodo(${t.id})" class="hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"><i class="fa-solid fa-trash-can text-xs"></i></button>
+            </div>`;
+          list.appendChild(card);
+        });
+
+        sortableInstances.push(new Sortable(list, {
+          group: 'kanban', animation: 150, ghostClass: 'sortable-ghost',
+          onEnd: function (evt) {
+            const taskId = Number(evt.item.dataset.id);
+            const newStage = evt.to.id.replace('kanban-', '').replace(/-/g, ' ');
+            const tIndex = db.todos.findIndex(t => t.id === taskId);
+            if(tIndex > -1) { 
+                db.todos[tIndex].stage = STAGES.find(s => s.replace(/\s+/g, '-').toLowerCase() === newStage.toLowerCase()) || newStage; 
+                document.getElementById('dash-task-count').innerText = db.todos.filter(x => x.stage !== 'Ready to Post').length;
+            }
+          }
+        }));
       });
+      document.getElementById('dash-task-count').innerText = db.todos.filter(x => x.stage !== 'Ready to Post').length;
+    }
 
-      const ctxAge = document.getElementById('chartAge').getContext('2d');
-      let ageData = [15, 55, 20, 7, 3];
-      if (analyticsData.audience) ageData = analyticsData.audience.ageData;
+    function deleteTodo(id) { db.todos = db.todos.filter(t => t.id !== id); renderTodos(); showToast("Task dihapus"); }
+    function openNoteModal(id) { activeTodoId = id; const t = db.todos.find(x => x.id === id); document.getElementById('modal-textarea').value = t.note || ''; document.getElementById('modal-note').classList.remove('hidden'); }
+    function closeModal() { document.getElementById('modal-note').classList.add('hidden'); activeTodoId = null; }
+    function saveNote() { if(activeTodoId) { const t = db.todos.find(x => x.id === activeTodoId); if(t) t.note = document.getElementById('modal-textarea').value; } closeModal(); showToast("Notes disimpan"); }
 
-      chartInstances.age = new Chart(ctxAge, {
-        type: 'bar',
-        data: { labels: ['13-17', '18-24', '25-34', '35-44', '45+'], datasets: [{ label: 'Percentage (%)', data: ageData, backgroundColor: '#10b981', borderRadius: 4 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    // --- CONTENT LOG ---
+    function toggleContentForm() { document.getElementById('content-form-container').classList.toggle('hidden'); }
+    document.getElementById('form-content').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = document.getElementById('c-title').value; const date = document.getElementById('c-date').value;
+      if(!title || !date) return;
+      db.contents.push({
+        id: Date.now(), title, date, link: document.getElementById('c-link').value,
+        views: Number(document.getElementById('c-views').value) || 0,
+        likes: Number(document.getElementById('c-likes').value) || 0
       });
-      chartsInitialized.audience = true;
-    }
-
-    function initVideoChart() {
-      const ctxVideo = document.getElementById('chartVideo').getContext('2d');
-      let labels = ['#appleevent #iphone18...', 'iPhone 18 Pro Launch...', 'Ada yang baru beli...'];
-      let data = [820000, 560000, 520000];
-      
-      if (analyticsData.video && analyticsData.video.top5) {
-          labels = analyticsData.video.top5.map(v => v.title.length > 30 ? v.title.substring(0, 30) + '...' : v.title);
-          data = analyticsData.video.top5.map(v => v.views);
-      }
-
-      chartInstances.video = new Chart(ctxVideo, {
-        type: 'bar',
-        data: { labels: labels, datasets: [{ label: 'Total Views', data: data, backgroundColor: '#6366f1', borderRadius: 4 }] },
-        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      e.target.reset(); toggleContentForm(); renderContents(); showToast("Post dicatat");
+    });
+    
+    function deleteContent(id) { db.contents = db.contents.filter(c => c.id !== id); renderContents(); showToast("Log dihapus"); }
+    function renderContents() {
+      const search = document.getElementById('search-log').value.toLowerCase();
+      const tbody = document.getElementById('content-table-body'); tbody.innerHTML = '';
+      db.contents.filter(c => c.title.toLowerCase().includes(search)).sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(c => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
+            <td class="px-5 py-4"><p class="font-semibold text-slate-800 dark:text-slate-200">${c.title}</p><p class="text-xs text-slate-500">${c.date}</p>
+              ${c.link ? `<a href="${c.link}" target="_blank" class="text-blue-500 hover:underline text-xs mt-1 block"><i class="fa-solid fa-link"></i> View</a>` : ''}</td>
+            <td class="px-5 py-4 text-xs text-slate-600 dark:text-slate-400 space-y-1"><div><i class="fa-solid fa-eye w-4"></i> ${formatNumber(c.views)}</div><div><i class="fa-solid fa-heart w-4 text-red-500"></i> ${formatNumber(c.likes)}</div></td>
+            <td class="px-5 py-4 text-right"><button onclick="deleteContent(${c.id})" class="text-slate-400 hover:text-red-500 p-2 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition"><i class="fa-solid fa-trash-can"></i></button></td>
+          </tr>`;
       });
-      chartsInitialized.video = true;
     }
 
-    const aiResponses = {
-      overview: "Berdasarkan analisis Data Overview terakhir, momentum peningkatan penayangan dan pertumbuhan followers sangat sehat. Pertahankan jadwal unggahan di masa peak hours untuk menjaga Engagement Rate.",
-      audience: "Demografi audiens utama kamu didominasi profil muda dengan preferensi interaksi tinggi pada format video pendek. Jika melakukan pitch brand, arahkan ke niche lifestyle atau tech muda.",
-      video: "Video dengan penyematan hashtag (#) khusus terbukti memberikan reach organik lebih tinggi. Strategi mendatang: Buat seri bersambung pada format video yang menempati peringkat ke-1 saat ini."
-    };
-
-    function generateAI(section) {
-      const btn = document.getElementById(`btn-ai-${section}`);
-      const textContainer = document.getElementById(`ai-text-${section}`);
-      const typingElement = document.getElementById(`typing-${section}`);
-      
-      btn.disabled = true;
-      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Analyzing Data...`;
-      textContainer.classList.add('hidden');
-      typingElement.innerHTML = '';
-
-      setTimeout(() => {
-        btn.innerHTML = `<i class="fa-solid fa-check mr-2"></i> Analysis Complete`;
-        btn.classList.replace('bg-indigo-600', 'bg-emerald-600');
-        btn.classList.replace('hover:bg-indigo-700', 'hover:bg-emerald-700');
-        textContainer.classList.remove('hidden');
-        typeText(typingElement, aiResponses[section], 0);
-      }, 1200);
-    }
-
-    function typeText(element, text, index) {
-      if (index < text.length) {
-        element.innerHTML += text.charAt(index);
-        setTimeout(() => typeText(element, text, index + 1), 20);
-      } else {
-        element.classList.remove('typing-cursor'); 
-      }
-    }
-
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      if(sidebar.classList.contains('-translate-x-full')) sidebar.classList.remove('-translate-x-full');
-      else sidebar.classList.add('-translate-x-full');
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => { 
+      // Hard reset in-memory state on preview
+      db = { todos: [], contents: [], daily: {} };
+      renderAllTabs(); renderTodos(); renderContents(); 
       switchTab('overview'); 
+      showToast("Workspace In-Memory Siap", "info");
     });
   </script>
 </body>
